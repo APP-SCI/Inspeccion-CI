@@ -1,4 +1,4 @@
-INSPECCIÓN DE EQUIPOS Y ELEMENTOS CI · v1.6
+INSPECCIÓN DE EQUIPOS Y ELEMENTOS CI · v1.7
 Formatos incluidos:
   - Formato de inspección de extintores
   - Formato de inspección de equipos de respiración autónoma y compresores de aire
@@ -35,12 +35,11 @@ INVENTARIO (PRECARGA DE EQUIPOS)
   estación trae los equipos precargados. "Exportar inventario" genera un .ciinv cifrado con clave
   para cargarlo en otros celulares.
 
-TABLERO Y REPORTES (CONSOLIDADO)
-  Operador: Inicio → Tablero y reportes → Enviar reporte. Genera un archivo .cirep cifrado con la
-  clave de reportes que define el coordinador; se envía por correo o carpeta compartida.
-  Coordinador: Tablero y reportes → Estaciones y programa (qué inspecciones aplican en cada
-  estación) → Cargar reportes. Muestra cumplimiento, estaciones sin reporte, hallazgos y planes
-  vencidos, y exporta un Excel consolidado.
+REPORTES Y TABLERO NACIONAL
+  Operador: Inicio → Enviar reporte. Genera un archivo .cirep (sin pedir clave) con sus inspecciones
+  finalizadas; se envía al coordinador por correo o carpeta compartida.
+  Coordinador: Seguridad y respaldo → Activar modo coordinador (una sola vez, con el código de
+  coordinador). Aparece "Tablero nacional": Estaciones y programa → Cargar reportes → Excel consolidado.
 
 SEGURIDAD
   - Datos cifrados AES-256-GCM; clave derivada del PIN con PBKDF2-SHA256, 600.000 iteraciones.

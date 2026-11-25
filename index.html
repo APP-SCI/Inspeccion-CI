@@ -258,6 +258,7 @@ gab:`<svg viewBox="0 0 64 64"><rect x="9" y="6" width="46" height="52" rx="5" fi
 mon:`<svg viewBox="0 0 64 64"><path d="M30 38L11 58M30 38l19 20M30 38v20" stroke="#2b2f36" stroke-width="4.5" stroke-linecap="round"/><path d="M30 36L48 15" stroke="#c8102e" stroke-width="9" stroke-linecap="round"/><path d="M48 15l5-6" stroke="#c9a227" stroke-width="10" stroke-linecap="round"/><circle cx="30" cy="37" r="8" fill="#c8102e"/><circle cx="30" cy="37" r="3" fill="#fff"/><path d="M56 3c4 2 6 6 5 11M60 1c3 3 4 7 3 11" stroke="#4fb3ff" stroke-width="2.5" fill="none" stroke-linecap="round"/><rect x="6" y="56" width="10" height="4" rx="2" fill="#2b2f36"/><rect x="44" y="56" width="10" height="4" rx="2" fill="#2b2f36"/></svg>`,
 esp:`<svg viewBox="0 0 64 64"><rect x="10" y="22" width="32" height="36" rx="5" fill="#ffc20e"/><path d="M10 32h32M10 48h32" stroke="#b8860b" stroke-width="2.5"/><rect x="13" y="25" width="4" height="30" rx="2" fill="#fff" opacity=".45"/><rect x="18" y="16" width="9" height="7" rx="1.5" fill="#2b2f36"/><rect x="17" y="36" width="18" height="8" rx="1.5" fill="#fff"/><path d="M20 40h12" stroke="#c8102e" stroke-width="2"/><circle cx="46" cy="16" r="8" fill="#fff" stroke="#7cc4ff" stroke-width="2.5"/><circle cx="56" cy="27" r="5.5" fill="#fff" stroke="#7cc4ff" stroke-width="2.5"/><circle cx="38" cy="7" r="4.5" fill="#fff" stroke="#7cc4ff" stroke-width="2.5"/><circle cx="57" cy="10" r="3" fill="#fff" stroke="#7cc4ff" stroke-width="2"/></svg>`,
 nfpa:`<svg viewBox="0 0 64 64"><path d="M6 14c9-4 18-4 26 2 8-6 17-6 26-2v38c-9-4-18-4-26 2-8-6-17-6-26-2z" fill="#fff"/><path d="M32 16v38" stroke="#14294d" stroke-width="2.5"/><path d="M11 22c6-2 11-2 16 1M11 30c6-2 11-2 16 1M11 38c6-2 11-2 16 1" stroke="#9fb4d6" stroke-width="2.2" fill="none"/><path d="M37 33l5 5 10-11" stroke="#ffc20e" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+send:`<svg viewBox="0 0 32 32"><path d="M4 15L28 4 21 28l-5-9z" fill="#c8102e"/><path d="M16 19L28 4" stroke="#fff" stroke-width="2"/><path d="M16 19l-2 8 5-5" fill="#17191d"/></svg>`,
 tab:`<svg viewBox="0 0 32 32"><rect x="4" y="18" width="6" height="10" rx="1.5" fill="#c8102e"/><rect x="13" y="11" width="6" height="17" rx="1.5" fill="#17191d"/><rect x="22" y="5" width="6" height="23" rx="1.5" fill="#ffc20e"/></svg>`,
 inv:`<svg viewBox="0 0 32 32"><rect x="6" y="5" width="20" height="24" rx="3" fill="none" stroke="#c8102e" stroke-width="3"/><rect x="11" y="2.5" width="10" height="5" rx="1.5" fill="#17191d"/><path d="M11 14h10M11 19h10M11 24h6" stroke="#17191d" stroke-width="2.5" stroke-linecap="round"/></svg>`,
 hist:`<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="none" stroke="#c8102e" stroke-width="3"/><path d="M16 9v8l5 3" stroke="#17191d" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`,
@@ -471,7 +472,7 @@ function route(){
   if(h.startsWith('m-')&&MODS[h.slice(2).replace(/-/g,'_')])return modView(h.slice(2).replace(/-/g,'_'));
   if(h.startsWith('e-')&&S.recs.get(h.slice(2)))return editor(S.recs.get(h.slice(2)));
   if(h.startsWith('n-')&&MODS[h.slice(2).replace(/-/g,'_')])return nfpaView(h.slice(2).replace(/-/g,'_'));
-  if(h==='nfpa')return nfpaView();if(h==='inventario')return invView();if(h==='tablero')return tabView();if(h==='historial')return histView();if(h==='seguridad')return secView();
+  if(h==='nfpa')return nfpaView();if(h==='inventario')return invView();if(h==='tablero')return S.cfg.coord?tabView():home();if(h==='historial')return histView();if(h==='seguridad')return secView();
   home();
 }
 const mh=m=>m.replace(/_/g,'-');
@@ -501,8 +502,8 @@ function home(){
     return `<button class="tile" data-tile="${t.id}"><span class="ic">${IC[t.ic]}</span><b>${esc(t.n)}</b><span class="freq">${(t.b||t.m.map(m=>[MODS[m].freq,MODS[m].months>1])).map(([x,y])=>`<span class="badge ${y?'y':''}">${esc(x)}</span>`).join('')}</span><span class="due ${di.c}">${esc(di.t)}</span></button>`}).join('')}
    <button class="tile nfpa" data-go="nfpa"><span class="ic">${IC.nfpa}</span><b>Normativa NFPA aplicada</b><span class="freq"><span class="badge y">Referencia</span></span><span class="due">Requisitos y frecuencias por equipo</span></button>
   </div>
-  <div class="row3"><button class="mini" data-go="historial">${IC.hist}<span><b>Historial</b><small>Buscar y exportar</small></span></button><button class="mini" data-go="inventario">${IC.inv}<span><b>Inventario</b><small>${Object.keys(S.inv).length?Object.keys(S.inv).length+' cargados':'Precargar equipos'}</small></span></button><button class="mini" data-go="tablero">${IC.tab}<span><b>Tablero y reportes</b><small>Consolidado por estación</small></span></button><button class="mini" data-go="seguridad">${IC.seg}<span><b>Seguridad y respaldo</b><small>PIN, copia cifrada, instalación</small></span></button></div></main>`;
-  $('#lk').onclick=()=>lock();
+  <div class="row3"><button class="mini" data-go="historial">${IC.hist}<span><b>Historial</b><small>Buscar y exportar</small></span></button><button class="mini" data-go="inventario">${IC.inv}<span><b>Inventario</b><small>${Object.keys(S.inv).length?Object.keys(S.inv).length+' cargados':'Precargar equipos'}</small></span></button><button class="mini" id="sendrep">${IC.send}<span><b>Enviar reporte</b><small>Al coordinador</small></span></button>${S.cfg.coord?`<button class="mini" data-go="tablero">${IC.tab}<span><b>Tablero nacional</b><small>Solo coordinador</small></span></button>`:''}<button class="mini" data-go="seguridad">${IC.seg}<span><b>Seguridad y respaldo</b><small>PIN, copia cifrada, instalación</small></span></button></div></main>`;
+  $('#lk').onclick=()=>lock();$('#sendrep').onclick=sendReport;
   $$('[data-tile]').forEach(b=>b.onclick=async()=>{const t=TILES.find(x=>x.id===b.dataset.tile);if(t.m.length===1)return go('m-'+mh(t.m[0]));
     const r=await dialog(`<h3>${esc(t.n)}</h3><p class="mut">Seleccione el formato a diligenciar.</p><div class="list">${t.m.map(m=>`<button class="it" data-pick="${m}"><span class="ic" style="width:48px;height:48px">${IC[MODS[m].icon].replace('<svg','<svg width="44" height="44"')}</span><span class="t"><b>${esc(MODS[m].title)}</b><small>Frecuencia ${MODS[m].freq.toLowerCase()} · ${esc(dueInfo(m).t)}</small></span></button>`).join('')}</div>`,[{t:'Cerrar'}]);
   });
@@ -606,7 +607,7 @@ function editor(r){
    <section class="card"><h3><span class="n">5</span>Responsable de la inspección</h3><div class="grid">${fieldHTML({l:'Nombre del funcionario que realiza la inspección',t:'text',req:1},'insp.nombre',r.insp.nombre||'',{},r)}${fieldHTML({l:'Cargo',t:'text',req:1},'insp.cargo',r.insp.cargo||'',{},r)}</div>
     <div class="f" style="margin-top:12px"><span>Firma <em>*</em></span><canvas class="sig" id="sig" aria-label="Área de firma"></canvas></div>
     <div class="btns" style="margin-top:8px"><button class="btn sm" data-act="sigclr">Limpiar firma</button>${S.cfg.sig?`<button class="btn sm" data-act="sigme">Usar mi firma guardada</button>`:''}<button class="btn sm" data-act="sigsave">Guardar como mi firma</button></div></section>
-   <section class="card"><h3>Exportar</h3><p class="sm mut">El Excel se genera sobre el formato oficial; para PDF, ábralo en Excel e imprima como PDF. Los archivos exportados salen sin cifrar: guárdelos o compártalos solo por canales autorizados.</p><div class="btns"><button class="btn" data-act="xlsx">Excel (.xlsx) en el formato</button>${navigator.canShare?`<button class="btn" data-act="share">Compartir…</button>`:''}<button class="btn sm d" data-act="rdel">Eliminar inspección</button></div></section>
+   <section class="card"><h3>Exportar</h3><p class="sm mut">El Excel se genera sobre el formato oficial; para PDF, ábralo en Excel e imprima como PDF. Los archivos exportados salen sin cifrar: guárdelos o compártalos solo por canales autorizados.</p><div class="btns"><button class="btn" data-act="xlsx">Excel (.xlsx) en el formato</button>${canShareF('a.xlsx',MIMEX)?`<button class="btn" data-act="share">Compartir…</button>`:''}<button class="btn sm d" data-act="rdel">Eliminar inspección</button></div></section>
   </main><div class="foot"><div class="wrap"><button class="btn" data-go="m-${mh(r.mod)}">Guardar y salir</button><button class="btn p" data-act="fin">${r.status==='final'?'Actualizar finalizada':'Finalizar inspección'}</button></div></div>`;
   renderFinds();renderPlan();upProg();sigInit();
   const ed=$('#ed');
@@ -656,7 +657,7 @@ async function onClick(e){
   if(act==='sigsave'){if(!CUR.firma){toast('Primero firme en el recuadro');return}S.cfg.sig=CUR.firma;await saveCfg();toast('Firma guardada cifrada en este dispositivo')}
   if(act==='sigme'){CUR.firma=S.cfg.sig;sigInit();touch();upProg()}
   if(act==='fin')finalize();
-  if(act==='xlsx')exportX(CUR);if(act==='share')shareX(CUR);
+  if(act==='xlsx')exportX(CUR);if(act==='share'){const def=MODS[CUR.mod];offerFile(await xlsxFor(CUR),fname(def,CUR,'xlsx'),MIMEX,'Archivo listo',`<p>${esc(fname(def,CUR,'xlsx'))}</p>`)}
   if(act==='rdel'){if(await confirmD('Eliminar inspección','Se eliminará permanentemente esta inspección del dispositivo.','Eliminar')){S.recs.delete(CUR.id);await DB.del('recs',CUR.id);const m=CUR.mod;CUR=null;go('m-'+mh(m))}}
 }
 function rerenderUnits(open){const def=MODS[CUR.mod];$('#units').innerHTML=CUR.units.map((u,i)=>unitHTML(def,CUR,i,i===open||CUR.units.length<=3)).join('');upAll()}
@@ -751,8 +752,10 @@ function xlsxBlob(def,r){const{R,M,widths}=buildRows(def,r);
 const fname=(def,r,ext)=>`Inspeccion_${def.title.replace('·','').trim()}_${(r.h.estacion||'').replace(/[^\wáéíóúñÁÉÍÓÚÑ-]+/g,'_')}_${r.h.fecha||''}.${ext}`.replace(/\s+/g,'_');
 function download(blob,name){if(EMBED){toast('En la vista previa no se permiten descargas. Instale la app para exportar.')}const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000)}
 async function exportX(r){const def=MODS[r.mod];download(await xlsxFor(r),fname(def,r,'xlsx'))}
-async function shareX(r){const def=MODS[r.mod];const f=new File([await xlsxFor(r)],fname(def,r,'xlsx'),{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:def.full})}catch(x){}}else toast('Este dispositivo no permite compartir archivos')}
+const MIMEX='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const canShareF=(n,t)=>{try{return!!(navigator.canShare&&navigator.canShare({files:[new File(['x'],n,{type:t})]}))}catch(e){return false}};
+async function offerFile(blob,name,type,title,html){const sh=canShareF(name,type);const q=await dialog(`<h3>${esc(title)}</h3>${html||''}`,sh?[{t:'Cerrar'},{t:'Descargar',v:'d'},{t:'Compartir…',c:'p',v:'s'}]:[{t:'Cerrar'},{t:'Descargar',c:'p',v:'d'}]);if(!q)return;
+  if(q.v==='s'){try{await navigator.share({files:[new File([blob],name,{type})],title})}catch(x){if(x&&x.name!=='AbortError'){toast('No se pudo compartir; se descargará el archivo');download(blob,name)}}}else download(blob,name)}
 function printRec(r){const def=MODS[r.mod];const{R,M}=buildRows(def,r);const W=Math.max(...R.map(x=>x.length));const mg={};M.forEach(m=>{const[a,b]=m.split(':');const ra=+a.replace(/\D/g,''),ca=a.replace(/\d/g,''),cb=b.replace(/\d/g,'');const ci=s=>[...s].reduce((n,c)=>n*26+c.charCodeAt(0)-64,0)-1;mg[ra+'-'+ci(ca)]=ci(cb)-ci(ca)+1});
   let h='<table>';R.forEach((row,ri)=>{if(!row.length){h+='<tr><td class="s0" style="height:6px" colspan="'+W+'"></td></tr>';return}h+='<tr>';let skip=0;for(let ci=0;ci<row.length;ci++){if(skip){skip--;continue}const c=row[ci];const o=c&&typeof c==='object'?c:{v:c??'',s:3};const sp=mg[(ri+1)+'-'+ci];
     const span=sp?sp:(ci===row.length-1&&row.length<W?W-ci:1);if(sp)skip=sp-1;h+=`<td class="s${o.s||0}" colspan="${span}">${esc(o.v)}</td>`}h+='</tr>'});h+='</table>';
@@ -1031,22 +1034,21 @@ function xlsxMulti(sheets){const files=[];let wbs='',rels='',ct='';
 /* --- operador: enviar reporte --- */
 async function repKeyAsk(title,txt){const r=await dialog(`<h3>${esc(title)}</h3><p class="sm mut">${esc(txt)}</p><label class="f"><span>Clave de reportes</span><input name="a" type="password" value="${esc(S.cfg.repKey||'')}"></label><label style="display:flex;gap:10px;align-items:center;min-height:44px"><input type="checkbox" name="g" ${S.cfg.repKey?'checked':''} style="width:22px;min-height:22px"> Recordar la clave en este dispositivo (cifrada)</label>`,[{t:'Cancelar'},{t:'Continuar',c:'p',v:1}]);
   if(!r)return null;const k=r.vals.a;if(k.length<8){toast('La clave debe tener 8 caracteres o más');return null}if(r.vals.g){S.cfg.repKey=k}else delete S.cfg.repKey;await saveCfg();return k}
+const TRK='inspeccion-ci/reporte/v1',COORD_H='7781c58d5526fc15e4d0a7ea667a4ef15f6ed8d3e6871f781410ce772331aa62';
 async function sendReport(){
   const mine=[...S.recs.values()].filter(r=>MODS[r.mod]&&r.status==='final');
   if(!mine.length){toast('No hay inspecciones finalizadas para reportar');return}
   const ests=[...new Set(mine.map(r=>cl(r.h.estacion).toUpperCase()))];
-  const k=await repKeyAsk('Enviar reporte',`Se incluirán ${mine.length} inspecciones finalizadas de: ${ests.join(', ')}. Sin fotos, para que el archivo sea liviano. Use la clave de reportes que le dio el coordinador.`);if(!k)return;
-  const salt=crypto.getRandomValues(new Uint8Array(16)),key=await derive(k,salt,ITER);
+  const salt=crypto.getRandomValues(new Uint8Array(16)),key=await derive(TRK,salt,1000);
   const payload={app:'inspeccion-ci-rep',v:1,at:Date.now(),emisor:{nombre:S.cfg.insp.nombre||'',cargo:S.cfg.insp.cargo||''},recs:mine.map(r=>({...r,fotos:[]}))};
-  const box=await seal(key,payload);const blob=new Blob([JSON.stringify({app:'inspeccion-ci-rep',v:1,enc:true,salt:b64(salt),iter:ITER,...box})],{type:'application/json'});
+  const box=await seal(key,payload);const blob=new Blob([JSON.stringify({app:'inspeccion-ci-rep',v:1,enc:true,salt:b64(salt),iter:1000,...box})],{type:'application/octet-stream'});
   const nm=`reporte_CI_${ests.length===1?ests[0].replace(/[^\wÁÉÍÓÚÑ]+/g,'_'):'varias'}_${todayISO()}.cirep`;
-  if(navigator.canShare){const f=new File([blob],nm,{type:'application/json'});if(navigator.canShare({files:[f]})){const q=await dialog(`<h3>Reporte listo</h3><p>${mine.length} inspecciones · ${esc(ests.join(', '))}</p>`,[{t:'Descargar',v:'d'},{t:'Compartir…',c:'p',v:'s'}]);if(q&&q.v==='s'){try{await navigator.share({files:[f],title:'Reporte de inspecciones CI'})}catch(x){}return}if(!q)return}}
-  download(blob,nm);toast('Reporte generado: envíelo al coordinador')}
+  await offerFile(blob,nm,'application/octet-stream','Reporte listo',`<p>${mine.length} inspecciones finalizadas de <b>${esc(ests.join(', '))}</b>, sin fotos.</p><p class="sm mut">Envíe el archivo al coordinador por correo o déjelo en la carpeta compartida.</p>`)}
 
 /* --- coordinador: importar reportes --- */
 async function importReports(files){let ok=0,n=0,errs=[];let key=null;
   for(const f of files){try{const j=JSON.parse(await f.text());if(j.app!=='inspeccion-ci-rep')throw new Error('no es un reporte de inspecciones');
-      let d=null;const tries=[S.cfg.repKey,key].filter(Boolean);for(const t of tries){try{d=await unseal(await derive(t,ub64(j.salt),j.iter),j);key=t;break}catch(x){}}
+      let d=null;const tries=[TRK,S.cfg.repKey,key].filter(Boolean);for(const t of tries){try{d=await unseal(await derive(t,ub64(j.salt),j.iter),j);key=t;break}catch(x){}}
       if(!d){const k=await repKeyAsk('Clave de reportes','Ingrese la clave con la que los operadores cifran sus reportes.');if(!k)return;try{d=await unseal(await derive(k,ub64(j.salt),j.iter),j);key=k}catch(x){throw new Error('clave incorrecta')}}
       for(const r of d.recs||[]){if(!r||!r.id||!MODS[r.mod]||r.status!=='final')continue;const cur=S.cons.get(r.id);if(cur&&cur.updated>=r.updated)continue;await saveCons({...r,_src:{emisor:d.emisor||{},at:d.at,archivo:f.name}});n++}ok++}
     catch(x){errs.push(f.name+': '+(x.message||'no se pudo leer'))}}
@@ -1073,8 +1075,7 @@ const CEL={ok:['Al día','var(--ok)','var(--okb)'],prox:['Próxima','light-dark(
 function tabView(){
   const zones=[...new Set((S.prog.stations||[]).map(s=>s.z).filter(Boolean))];const zone=S.cfg.tabZone&&zones.includes(S.cfg.tabZone)?S.cfg.tabZone:'';
   const D=tabData(zone);const cols=TMODS.filter(m=>D.st.some(s=>s.m.includes(m)));
-  root.innerHTML=bar('Tablero y reportes','Consolidado de inspecciones por estación')+`<main class="wrap pg">
-   <div class="card"><h3>Enviar mi reporte</h3><p class="sm mut">Para operadores: genera un archivo cifrado con sus inspecciones finalizadas para enviarlo al coordinador por correo o carpeta compartida.</p><div class="btns"><button class="btn k" id="rsend">Enviar reporte</button></div></div>
+  root.innerHTML=bar('Tablero nacional','Consolidado de inspecciones por estación · coordinador')+`<main class="wrap pg">
    <div class="card"><h3>Tablero nacional</h3>
     <div class="btns" style="margin-bottom:12px"><label class="btn p">${IC.plus}Cargar reportes<input type="file" id="rimp" accept=".cirep,application/json" multiple class="hide"></label><button class="btn" id="rprog">Estaciones y programa</button>${D.st.length?`<button class="btn" id="rxls">Excel consolidado</button>`:''}</div>
     ${zones.length>1?`<label class="f" style="max-width:260px;margin-bottom:12px"><span>Zona</span><select id="rzone"><option value="">Todas</option>${zones.map(z=>`<option ${z===zone?'selected':''}>${esc(z)}</option>`).join('')}</select></label>`:''}
@@ -1099,7 +1100,7 @@ function tabView(){
      ${p.length?`<div style="overflow-x:auto;margin-top:8px"><table class="lg"><thead><tr><th>Acción</th><th>Responsable</th><th>Fecha</th></tr></thead><tbody>${p.map(x=>`<tr><td>${esc(x.p.acc||x.p.sit||'')}</td><td>${esc(x.p.resp||'')}</td><td><span class="pill ${x.v?'bad':'ok'}">${fmt(x.p.fv)||'—'}</span></td></tr>`).join('')}</tbody></table></div>`:''}</div></details>`}).join('')||'<p class="mut">Sin hallazgos ni planes de mejora en las últimas inspecciones.</p>'}</div>
    <div class="card"><h3>Reportes recibidos</h3>${S.cons.size?`<div class="list">${Object.values([...S.cons.values()].reduce((a,r)=>{const k=r._src.archivo+'|'+r._src.at;(a[k]=a[k]||{f:r._src,n:0,e:new Set()}).n++;a[k].e.add(r.h.estacion);return a},{})).sort((a,b)=>b.f.at-a.f.at).map(x=>`<div class="it"><span class="t"><b>${esc([...x.e].join(', '))}</b><small>${x.n} inspecciones · ${esc(x.f.emisor.nombre||'sin nombre')} · generado ${fmt(iso(new Date(x.f.at)))}</small></span></div>`).join('')}</div><div class="btns" style="margin-top:10px"><button class="btn sm d" id="rclr">Borrar reportes cargados</button></div>`:'<p class="mut">Aún no se han cargado reportes.</p>'}</div>`:''}
   </main>`;
-  $('#rsend').onclick=sendReport;$('#rimp').onchange=e=>{const f=[...e.target.files];e.target.value='';if(f.length)importReports(f)};$('#rprog').onclick=progEdit;
+  $('#rimp').onchange=e=>{const f=[...e.target.files];e.target.value='';if(f.length)importReports(f)};$('#rprog').onclick=progEdit;
   const z=$('#rzone');if(z)z.onchange=e=>{S.cfg.tabZone=e.target.value;saveCfg();tabView()};
   const x=$('#rxls');if(x)x.onclick=()=>exportCons(D,cols,zone);
   const c=$('#rclr');if(c)c.onclick=async()=>{if(await confirmD('Borrar reportes','Se quitarán del tablero todas las inspecciones recibidas de otros dispositivos. Las inspecciones propias no cambian.','Borrar')){for(const id of S.cons.keys())await DB.del('cons',id);S.cons.clear();tabView()}};
@@ -1160,6 +1161,7 @@ function secView(){
    <li>La app no tiene servidor, cuentas, analítica ni librerías externas. Su política de seguridad de contenido bloquea toda conexión de red (<code>connect-src 'none'</code>).</li>
    <li>Bloqueo automático por inactividad y al salir de la app más de 3 minutos; retardo creciente tras 3 intentos fallidos.</li>
    <li>Lo único que sale del dispositivo es lo que usted exporte (Excel o copia cifrada).</li></ul></div>
+  <div class="card"><h3>Modo coordinador</h3><p class="sm mut">${S.cfg.coord?'Activo en este dispositivo: el inicio muestra el Tablero nacional.':'Solo para el coordinador: habilita el Tablero nacional en este dispositivo. Se activa una sola vez con el código de coordinador.'}</p><div class="btns"><button class="btn ${S.cfg.coord?'':'k'}" id="coord">${S.cfg.coord?'Desactivar modo coordinador':'Activar modo coordinador'}</button></div></div>
   <div class="card"><h3>Ajustes</h3><div class="grid">
    <label class="f"><span>Bloqueo automático por inactividad</span><select id="al">${[2,5,10,15].map(n=>`<option value="${n}" ${S.cfg.autolock==n?'selected':''}>${n} minutos</option>`).join('')}</select></label>
    <label class="f"><span>Inspector por defecto</span><input id="in" value="${esc(S.cfg.insp.nombre||'')}" autocomplete="off"></label><label class="f"><span>Cargo por defecto</span><input id="ic" value="${esc(S.cfg.insp.cargo||'')}" autocomplete="off"></label></div>
@@ -1172,10 +1174,13 @@ function secView(){
    <li><b>PC (Chrome o Edge):</b> ícono de instalar en la barra de direcciones, o abra el archivo <code>index.html</code> directamente.</li>
    <li>Los datos quedan en el navegador/app de cada dispositivo: no se sincronizan entre equipos. Use la copia cifrada para trasladarlos.</li></ol></div>
   <div class="card"><h3 style="color:var(--bad)">Zona de riesgo</h3><p class="sm mut">Elimina permanentemente todas las inspecciones, la firma guardada y el PIN de este dispositivo.</p><button class="btn d" id="wp">Borrar todos los datos</button></div>
-  <p class="sm mut" style="text-align:center">Inspección de equipos y elementos CI · v1.6 · ${S.recs.size} registros</p></main>`;
+  <p class="sm mut" style="text-align:center">Inspección de equipos y elementos CI · v1.7 · ${S.recs.size} registros</p></main>`;
   $('#al').onchange=e=>{S.cfg.autolock=+e.target.value;saveCfg();toast('Bloqueo automático: '+e.target.value+' min')};
   $('#in').onchange=e=>{S.cfg.insp.nombre=e.target.value;saveCfg()};$('#ic').onchange=e=>{S.cfg.insp.cargo=e.target.value;saveCfg()};
   $('#lk2').onclick=()=>lock();
+  $('#coord').onclick=async()=>{if(S.cfg.coord){S.cfg.coord=false;await saveCfg();toast('Modo coordinador desactivado');secView();return}
+    const r=await dialog(`<h3>Activar modo coordinador</h3><label class="f"><span>Código de coordinador</span><input name="a" type="password" autocomplete="off"></label>`,[{t:'Cancelar'},{t:'Activar',c:'p',v:1}]);if(!r)return;
+    const h=hex(new Uint8Array(await crypto.subtle.digest('SHA-256',te.encode(r.vals.a.trim()))));if(h!==COORD_H){toast('Código incorrecto');return}S.cfg.coord=true;await saveCfg();toast('Modo coordinador activo');secView()};
   $('#cp').onclick=async()=>{const r=await dialog(`<h3>Cambiar PIN / clave</h3><label class="f"><span>Actual</span><input name="a" type="password"></label><label class="f"><span>Nuevo (PIN 6+ dígitos o clave 8+ caracteres)</span><input name="b" type="password"></label><label class="f"><span>Confirmar nuevo</span><input name="c" type="password"></label>`,[{t:'Cancelar'},{t:'Cambiar',c:'p',v:1}]);
     if(!r)return;const{a,b,c}=r.vals;if(b!==c)return toast('Los valores nuevos no coinciden');const kind=/^\d+$/.test(b)?'pin':'pass';if(kind==='pin'?b.length<6:b.length<8)return toast('PIN o clave demasiado corto');
     const au=await DB.get('meta','auth');try{await unseal(await derive(a,ub64(au.salt),au.iter),au.check)}catch(x){return toast('El PIN actual no es correcto')}
