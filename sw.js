@@ -1,5 +1,5 @@
 // Service worker: guarda la app en el dispositivo para uso sin señal. No envía datos a ningún lado.
-const C='inspeccion-ci-a8e497c639';
+const C='inspeccion-ci-a51ea10aab';
 const F=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png','./icon-maskable-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(F)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});

@@ -1,4 +1,4 @@
-INSPECCIÓN DE EQUIPOS Y ELEMENTOS CI · v1.1
+INSPECCIÓN DE EQUIPOS Y ELEMENTOS CI · v1.3
 Formatos incluidos:
   - Formato de inspección de extintores
   - Formato de inspección de equipos de respiración autónoma y compresores de aire
