@@ -1,0 +1,42 @@
+INSPECCIÓN DE EQUIPOS Y ELEMENTOS CI · v1.1
+Formatos incluidos:
+  - Formato de inspección de extintores
+  - Formato de inspección de equipos de respiración autónoma y compresores de aire
+  - Formato inspección mangueras contra incendios
+  - Formato inspección de gabinetes contra incendios - áreas operativas y no operativas
+  - Formato inspección monitores portátiles de agua tipo araña
+  - Formato actualización del inventario de espumas contra incendios en estaciones
+
+CONTENIDO DE LA CARPETA
+  index.html              La aplicación completa (un solo archivo, sin librerías externas)
+  sw.js                   Service worker: guarda la app en el dispositivo para usarla sin señal
+  manifest.webmanifest    Datos de instalación (nombre, ícono, colores)
+  icon-*.png              Íconos
+
+CÓMO INSTALARLA EN LOS CELULARES (recomendado)
+1. Publique esta carpeta UNA VEZ en un sitio HTTPS estático: servidor web/intranet de la empresa,
+   SharePoint con sitio estático, GitHub Pages, Netlify Drop, etc. El sitio solo entrega los archivos:
+   la app nunca le envía datos (no tiene código de red y su política CSP bloquea toda conexión).
+2. Android (Chrome): abra la dirección → menú ⋮ → "Instalar aplicación".
+   iPhone/iPad (Safari): abra la dirección → Compartir → "Agregar a pantalla de inicio".
+3. Desde ese momento funciona sin señal. Abra siempre desde el ícono instalado.
+
+USO EN PC SIN INSTALAR
+  Abra index.html con Chrome o Edge. Funciona, pero sin modo "instalado".
+
+SI SE REQUIERE APK (Android) O APP DE TIENDA (iOS)
+  La misma carpeta se puede empaquetar sin cambios con PWABuilder (pwabuilder.com) o con
+  Capacitor (npx cap init / add android / add ios). Para iOS se requiere Mac con Xcode y cuenta
+  de desarrollador Apple.
+
+SEGURIDAD
+  - Datos cifrados AES-256-GCM; clave derivada del PIN con PBKDF2-SHA256, 600.000 iteraciones.
+  - Sin servidor, sin cuentas, sin analítica, sin librerías de terceros.
+  - Bloqueo por inactividad (2-15 min, configurable) y al dejar la app más de 3 minutos.
+  - Retardo creciente después de 3 intentos fallidos de PIN.
+  - Si se olvida el PIN, los datos NO se pueden recuperar: haga copias cifradas periódicas
+    (Seguridad y respaldo → Exportar copia cifrada).
+  - Los Excel/PDF exportados salen sin cifrar: compártalos solo por canales autorizados.
+  - Los datos quedan en cada dispositivo; no se sincronizan. Use la copia cifrada para moverlos.
+
+NOTA: Borrar los datos del navegador o desinstalar la app elimina las inspecciones guardadas.

@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'; connect-src 'none'; font-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#a3101c">
+<meta name="referrer" content="no-referrer">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Inspección CI">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-180.png">
+<title>Inspección de equipos CI</title>
+<style>
+/* VOICE: herramienta de campo, clara y confiable, nada decorativo que estorbe con guantes o con sol.
+   IDEA: la tarjeta de inspección que cuelga del equipo: rojo de seguridad, amarillo de advertencia, casillas firmes.
+   PICTURE: íconos propios de cada equipo sobre un menú rojo con franja de riesgo.
+   COLOUR and TYPE: blanco, tinta #17191d, rojo #c8102e dominante, amarillo #ffc20e acento; fuente del sistema, cifras tabulares.
+   LAYOUT: una columna en el teléfono, rejilla de mosaicos en pantallas anchas, barra superior fija con estado de guardado. */
+:root{color-scheme:light dark;
+--bg:light-dark(#f3f1ee,#121315);--card:light-dark(#fff,#1d1f23);--ink:light-dark(#17191d,#eceae6);--mut:light-dark(#5d626b,#a3a7ae);
+--line:light-dark(#e2ded8,#30333a);--red:#c8102e;--red2:#8e0c1a;--yel:#ffc20e;--ok:light-dark(#1d7a45,#4cc27f);--okb:light-dark(#e3f4ea,#15301f);
+--bad:light-dark(#b3001b,#ff6b7d);--badb:light-dark(#fde4e7,#3a1519);--warnb:light-dark(#fff4d1,#3a2f0c);--tint:light-dark(#fbeceb,#2a1d1f);--field:light-dark(#faf9f7,#16171a)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;overflow-x:clip;min-height:100vh;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--yel);outline-offset:2px}
+.hide{display:none!important}
+.wrap{max-width:1100px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left)) 0 max(16px,env(safe-area-inset-right))}
+/* Encabezado rojo */
+.hero{background:linear-gradient(160deg,#d0162f 0%,#a3101c 55%,#7d0b16 100%);color:#fff;position:relative;padding:calc(env(safe-area-inset-top) + 18px) 0 30px;overflow:hidden}
+.hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:10px;background:repeating-linear-gradient(-45deg,var(--yel) 0 14px,#17191d 14px 28px)}
+.hero .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;opacity:.95}
+.brand svg{width:30px;height:30px}
+.hero h1{font-size:clamp(28px,6vw,46px);line-height:1.05;margin:22px 0 8px;text-wrap:balance;font-weight:800;letter-spacing:-.01em}
+.hero p{margin:0;opacity:.88;max-width:60ch}
+.ibtn{border:0;background:rgba(255,255,255,.16);color:#fff;border-radius:12px;min-height:44px;padding:0 14px;display:inline-flex;align-items:center;gap:8px;font-weight:600}
+.ibtn svg{width:20px;height:20px}
+.chipline{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.chipline span{background:rgba(0,0,0,.22);border-radius:99px;padding:4px 12px;font-size:13px;display:inline-flex;gap:6px;align-items:center}
+/* Mosaicos */
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:22px 0}
+@media(min-width:760px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.tile{overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;text-align:left;display:flex;flex-direction:column;gap:8px;min-height:190px;box-shadow:0 1px 0 rgba(0,0,0,.03),0 8px 24px -16px rgba(80,10,10,.35);transition:transform .15s}
+.tile:active{transform:scale(.98)}
+.tile .ic{width:72px;height:72px;border-radius:20px;background:var(--tint);display:grid;place-items:center}
+.tile .ic svg{width:56px;height:56px}
+.tile b{font-size:17px;line-height:1.2}
+.freq{display:flex;flex-wrap:wrap;gap:6px}
+.badge{font-size:12px;font-weight:700;border-radius:99px;padding:3px 9px;background:#17191d;color:#fff;line-height:1.3}
+.badge.y{background:var(--yel);color:#17191d}
+.due{font-size:13px;color:var(--mut);margin-top:auto}
+.due.bad{color:var(--bad);font-weight:600}.due.okk{color:var(--ok)}
+.tile.nfpa{background:linear-gradient(135deg,#1f3f73,#14294d);color:#fff;border:0}
+.tile.nfpa .ic{background:rgba(255,255,255,.12)}.tile.nfpa .due{color:#cfdcf2}
+.row3{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:28px}
+.mini{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;gap:12px;align-items:center;text-align:left;min-height:64px}
+.mini svg{width:30px;height:30px;flex:none}
+.mini small{display:block;color:var(--mut);font-size:13px}
+/* Barra de módulo */
+.bar{position:sticky;top:0;z-index:20;background:var(--red2);color:#fff;padding:calc(env(safe-area-inset-top) + 8px) 0 8px}
+.bar .wrap{display:flex;align-items:center;gap:10px}
+.bar h2{font-size:17px;margin:0;line-height:1.2;flex:1}
+.bar h2 small{display:block;font-weight:500;opacity:.8;font-size:12px}
+.savest{font-size:12px;opacity:.9;white-space:nowrap}
+.prog{height:4px;background:rgba(255,255,255,.2)}.prog i{display:block;height:100%;background:var(--yel);width:0;transition:width .3s}
+main.pg{padding-top:18px;padding-bottom:120px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+.card h3{margin:0 0 12px;font-size:18px;display:flex;align-items:center;gap:10px}
+.card h3 .n{width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center;font-size:14px;flex:none}
+.mhead{display:flex;gap:14px;align-items:center}
+.mhead .ic{width:64px;height:64px;border-radius:18px;background:var(--tint);display:grid;place-items:center;flex:none}.mhead .ic svg{width:50px;height:50px}
+.mut{color:var(--mut)}.sm{font-size:13px}
+/* Campos */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:12px 14px}
+.f{display:flex;flex-direction:column;gap:5px}
+.f>span{font-size:13px;font-weight:600;color:var(--mut);line-height:1.3}
+.f>span em{color:var(--bad);font-style:normal}
+.f.wide{grid-column:1/-1}
+.f .h{font-size:12px;color:var(--mut);font-weight:400}
+input,select,textarea{width:100%;min-height:46px;border:1.5px solid var(--line);border-radius:12px;background:var(--field);padding:10px 12px;font-size:16px}
+textarea{min-height:84px;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3px rgba(200,16,46,.15)}
+select.isbad,input.isbad{border-color:var(--bad);background:var(--badb)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{flex:1 1 auto;min-height:44px;border:1.5px solid var(--line);background:var(--field);border-radius:12px;padding:6px 10px;font-size:14px;font-weight:600}
+.seg button.on{background:#17191d;color:#fff;border-color:#17191d}
+.seg button.on.good{background:var(--ok);border-color:var(--ok)}
+.seg button.on.bad{background:var(--bad);border-color:var(--bad)}
+.warn{background:var(--warnb);border-radius:10px;padding:6px 10px;font-size:13px}
+.grp{grid-column:1/-1;font-weight:800;font-size:14px;border-top:1px dashed var(--line);padding-top:12px;margin-top:4px;color:var(--red)}
+/* Tarjetas de equipo */
+details.u{border:1.5px solid var(--line);border-radius:16px;margin-bottom:10px;background:var(--card)}
+details.u>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;min-height:56px}
+details.u>summary::-webkit-details-marker{display:none}
+details.u>summary .t{flex:1;font-weight:700;line-height:1.25}
+details.u>summary .t small{display:block;font-weight:500;color:var(--mut);font-size:13px}
+details.u[open]>summary{border-bottom:1px solid var(--line)}
+.ub{padding:14px}
+.pill{font-size:12px;font-weight:700;border-radius:99px;padding:4px 10px;white-space:nowrap}
+.pill.ok{background:var(--okb);color:var(--ok)}.pill.bad{background:var(--badb);color:var(--bad)}.pill.inc{background:var(--line);color:var(--mut)}.pill.dr{background:var(--warnb);color:light-dark(#7a5a00,#ffd766)}
+.uact{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.btn{min-height:46px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);padding:0 16px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.p{background:var(--red);border-color:var(--red);color:#fff}
+.btn.k{background:#17191d;border-color:#17191d;color:#fff}
+.btn.g{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.sm{min-height:40px;font-size:14px;padding:0 12px}
+.btn.d{color:var(--bad)}
+.btn svg{width:18px;height:18px}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+.el{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:center}
+.el .nm{grid-column:1/-1;font-weight:600;font-size:14px}
+.el .ctl{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.1fr) 70px 78px minmax(0,1.4fr);gap:6px;align-items:center}
+.el .req{font-size:12px;text-align:center;color:var(--mut);line-height:1.1}.el .req b{display:block;font-size:16px;color:var(--ink)}
+.el input,.el select{min-height:42px;padding:6px 8px;font-size:15px}
+.el .seg button{min-height:42px;padding:4px 6px}
+.lg{width:100%;border-collapse:collapse;font-size:14px}
+.lg th{text-align:left;font-size:12px;color:var(--mut);font-weight:700;padding:4px}
+.lg td{padding:4px;vertical-align:middle}
+.lg input{min-height:42px;padding:6px 8px}
+.list .it{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;margin-bottom:8px;background:var(--card);width:100%;text-align:left}
+.list .it .t{flex:1;line-height:1.3}.list .it .t small{display:block;color:var(--mut);font-size:13px}
+.datebox{width:52px;text-align:center;flex:none;border-radius:12px;background:var(--tint);padding:6px 0;line-height:1.1}
+.datebox b{display:block;font-size:20px;color:var(--red)}.datebox span{font-size:11px;text-transform:uppercase;color:var(--mut)}
+.find{margin:0;padding-left:18px}.find li{margin:4px 0}
+.fotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:10px}
+.fotos figure{margin:0;position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--line)}
+.fotos img{width:100%;height:100%;object-fit:cover}
+.fotos button{position:absolute;top:4px;right:4px;width:32px;height:32px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-weight:700}
+.sig{width:100%;height:180px;border:1.5px dashed var(--mut);border-radius:14px;background:#fff;touch-action:none;display:block}
+.foot{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--card);border-top:1px solid var(--line);padding:10px 0 calc(10px + env(safe-area-inset-bottom))}
+.foot .wrap{display:flex;gap:10px}.foot .btn{flex:1}
+.fab{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));z-index:20;border-radius:18px;min-height:56px;padding:0 22px;box-shadow:0 10px 30px -10px rgba(160,10,20,.6)}
+/* Bloqueo */
+.lock{min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(170deg,#c8102e,#6e0913)}
+.lockc{background:var(--card);border-radius:24px;padding:26px 22px;width:min(420px,100%);box-shadow:0 30px 80px -30px #000}
+.lockc .lg2{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.lockc .lg2 svg{width:52px;height:52px}
+.lockc h1{font-size:22px;line-height:1.15;margin:0}
+.lockc p{color:var(--mut);font-size:14px}
+.lockc .f{margin-bottom:12px}
+.pinin{font-size:22px;letter-spacing:.3em;text-align:center}
+.err{color:var(--bad);font-size:14px;min-height:20px;margin:4px 0 10px}
+.shield{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--mut);margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+.shield svg{width:18px;height:18px;flex:none;margin-top:2px}
+/* Diálogo y avisos */
+.dlg{position:fixed;inset:0;z-index:50;background:rgba(10,10,12,.55);display:grid;place-items:end center;padding:0}
+@media(min-width:640px){.dlg{place-items:center;padding:20px}}
+.dlg>div{background:var(--card);width:min(560px,100%);max-height:90vh;overflow:auto;border-radius:22px 22px 0 0;padding:22px 18px calc(18px + env(safe-area-inset-bottom))}
+@media(min-width:640px){.dlg>div{border-radius:22px}}
+.dlg h3{margin:0 0 10px;font-size:19px}
+.dlg .btns{margin-top:16px;justify-content:flex-end}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#17191d;color:#fff;padding:10px 18px;border-radius:12px;z-index:60;font-size:14px;max-width:90vw;box-shadow:0 10px 30px -10px #000}
+.ribbon{background:var(--warnb);font-size:13px;padding:8px 14px;text-align:center}
+.nf h4{margin:14px 0 4px;font-size:15px}
+.nf ul{margin:4px 0 0;padding-left:20px}.nf li{margin:3px 0}
+.sumbox{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.sumbox span{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px}
+.sumbox b{font-size:15px}
+.search{margin-bottom:12px}
+#print{display:none}
+@media(max-width:420px){.tile{min-height:176px;padding:14px}.tile .ic{width:62px;height:62px}.tile .ic svg{width:48px;height:48px}.el .ctl{grid-template-columns:minmax(0,1fr) 58px 66px;}.el .ctl select{grid-column:1/-1}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{
+ body{background:#fff;color:#000}#root,.toast,.dlg{display:none!important}#print{display:block}
+ #print table{width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:8px;page-break-inside:auto}
+ #print td{border:1px solid #888;padding:3px 5px;vertical-align:top}
+ #print td.s1{border:0;font-size:13pt;font-weight:800}#print td.s0{border:0}
+ #print td.s2{background:#e6e6e6;font-weight:700}#print td.s4{font-weight:700;text-decoration:underline}
+ #print td.s5,#print td.s6{background:#f0f0f0;font-weight:700}#print td.s6{border:0}
+ #print .pf{display:flex;gap:16px;align-items:flex-end;margin-top:8px}#print .pf img{height:70px;border-bottom:1px solid #000}
+ #print .ph{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}#print .ph img{width:31%;border:1px solid #999}
+ @page{size:landscape;margin:10mm}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="print"></div>
+<script>
+{
+'use strict';
+/* ================= Utilidades ================= */
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const te=new TextEncoder(),td=new TextDecoder();
+const hex=b=>[...b].map(x=>x.toString(16).padStart(2,'0')).join('');
+const uid=()=>hex(crypto.getRandomValues(new Uint8Array(8)));
+const pad=n=>String(n).padStart(2,'0');
+const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const todayISO=()=>iso(new Date());
+const fmt=s=>s&&/^\d{4}-\d{2}(-\d{2})?$/.test(s)?s.split('-').reverse().join('/'):(s||'');
+const addM=(s,m)=>{const [y,mo,d]=s.split('-').map(Number);return iso(new Date(y,mo-1+m,d))};
+const yrs=(a,b)=>(new Date(b)-new Date(a))/31557600000;
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const EMBED=(()=>{try{return window.top!==window}catch(e){return true}})();
+let EMBED_NOTE=EMBED;
+
+/* ================= Cifrado (AES-256-GCM + PBKDF2) ================= */
+const ITER=600000;
+const b64=u=>{const b=new Uint8Array(u);let s='';for(let i=0;i<b.length;i+=32768)s+=String.fromCharCode.apply(null,b.subarray(i,i+32768));return btoa(s)};
+const ub64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function derive(pass,salt,iter){
+  const k=await crypto.subtle.importKey('raw',te.encode(pass),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:iter,hash:'SHA-256'},k,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function seal(key,obj){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,te.encode(JSON.stringify(obj)));return{iv:b64(iv),ct:b64(ct)}}
+async function unseal(key,box){const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:ub64(box.iv)},key,ub64(box.ct));return JSON.parse(td.decode(pt))}
+
+/* ================= Almacenamiento local (IndexedDB) ================= */
+const DB={db:null,mem:{meta:new Map(),recs:new Map()},
+  async init(){try{this.db=await new Promise((res,rej)=>{const r=indexedDB.open('inspeccion-ci',1);r.onupgradeneeded=()=>{r.result.createObjectStore('meta');r.result.createObjectStore('recs')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}catch(e){this.db=null}},
+  tx(st,mode,fn){return new Promise((res,rej)=>{const t=this.db.transaction(st,mode),r=fn(t.objectStore(st));t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})},
+  get(st,k){return this.db?this.tx(st,'readonly',s=>s.get(k)):Promise.resolve(this.mem[st].get(k))},
+  put(st,k,v){return this.db?this.tx(st,'readwrite',s=>s.put(v,k)):Promise.resolve(this.mem[st].set(k,v))},
+  del(st,k){return this.db?this.tx(st,'readwrite',s=>s.delete(k)):Promise.resolve(this.mem[st].delete(k))},
+  all(st){return this.db?this.tx(st,'readonly',s=>s.getAll()):Promise.resolve([...this.mem[st].values()])},
+  async wipe(){if(this.db){await this.tx('recs','readwrite',s=>s.clear());await this.tx('meta','readwrite',s=>s.clear())}else{this.mem.meta.clear();this.mem.recs.clear()}}
+};
+
+/* ================= Íconos ================= */
+const IC={
+ext:`<svg viewBox="0 0 64 64"><path d="M27 15c-9 0-13 6-13 14v13" stroke="#2b2f36" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M12 42l4 7" stroke="#2b2f36" stroke-width="4" stroke-linecap="round"/><rect x="22" y="19" width="21" height="39" rx="9" fill="#c8102e"/><rect x="25" y="21" width="5" height="34" rx="2.5" fill="#fff" opacity=".25"/><rect x="22" y="31" width="21" height="11" fill="#fff" opacity=".9"/><path d="M27 36.5h11" stroke="#c8102e" stroke-width="2"/><rect x="27" y="10" width="11" height="10" rx="2" fill="#2b2f36"/><path d="M36 11h10l5 4" stroke="#2b2f36" stroke-width="3.5" fill="none" stroke-linecap="round"/><circle cx="44" cy="22" r="4.5" fill="#fff" stroke="#2b2f36" stroke-width="2"/><path d="M44 22l2-2" stroke="#1d7a45" stroke-width="1.6"/></svg>`,
+scba:`<svg viewBox="0 0 64 64"><rect x="38" y="6" width="15" height="46" rx="7.5" fill="#ffc20e"/><rect x="41" y="9" width="4" height="40" rx="2" fill="#fff" opacity=".4"/><rect x="41" y="2" width="9" height="6" rx="1.5" fill="#2b2f36"/><path d="M8 28c0-11 7-18 17-18s17 7 17 18-5 26-17 26S8 39 8 28z" fill="#2b2f36"/><path d="M13 27c0-8 5-12 12-12s12 4 12 12c0 5-1.5 8-3.5 10h-17C14.5 35 13 32 13 27z" fill="#8fd3ff"/><path d="M16 22c2-3 5-4 9-4" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".8"/><circle cx="25" cy="45" r="6" fill="#c8102e"/><circle cx="25" cy="45" r="2.2" fill="#2b2f36"/><path d="M31 47c8 1 13-3 14-9" stroke="#2b2f36" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`,
+comp:`<svg viewBox="0 0 64 64"><rect x="6" y="30" width="52" height="22" rx="4" fill="#2b2f36"/><rect x="10" y="18" width="22" height="14" rx="3" fill="#c8102e"/><path d="M14 22h14M14 26h14" stroke="#fff" stroke-width="2" opacity=".6"/><circle cx="44" cy="24" r="8" fill="#fff" stroke="#2b2f36" stroke-width="3"/><path d="M44 24l4-3" stroke="#c8102e" stroke-width="2.4" stroke-linecap="round"/><circle cx="16" cy="54" r="4" fill="#5d626b"/><circle cx="48" cy="54" r="4" fill="#5d626b"/><path d="M12 38h40M12 44h40" stroke="#ffc20e" stroke-width="2.5"/></svg>`,
+mang:`<svg viewBox="0 0 64 64"><path d="M30 54h18" stroke="#c8102e" stroke-width="8" stroke-linecap="round"/><circle cx="29" cy="32" r="22" fill="#c8102e"/><circle cx="29" cy="32" r="16" fill="none" stroke="#7d0b16" stroke-width="2.5"/><circle cx="29" cy="32" r="10" fill="none" stroke="#7d0b16" stroke-width="2.5"/><circle cx="29" cy="32" r="4" fill="#2b2f36"/><path d="M14 18c4-5 10-7 16-7" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".5"/><rect x="46" y="48" width="13" height="12" rx="2.5" fill="#c9a227"/><path d="M50 48v12M54 48v12" stroke="#8a6d10" stroke-width="1.6"/></svg>`,
+gab:`<svg viewBox="0 0 64 64"><rect x="9" y="6" width="46" height="52" rx="5" fill="#c8102e"/><rect x="14" y="11" width="36" height="42" rx="3" fill="#ffe9ea"/><circle cx="32" cy="28" r="12" fill="none" stroke="#c8102e" stroke-width="6"/><circle cx="32" cy="28" r="3.5" fill="#2b2f36"/><path d="M19 46h26" stroke="#2b2f36" stroke-width="4" stroke-linecap="round"/><path d="M17 14l9 0-9 9z" fill="#fff" opacity=".8"/><rect x="47" y="26" width="3" height="10" rx="1.5" fill="#ffc20e"/></svg>`,
+mon:`<svg viewBox="0 0 64 64"><path d="M30 38L11 58M30 38l19 20M30 38v20" stroke="#2b2f36" stroke-width="4.5" stroke-linecap="round"/><path d="M30 36L48 15" stroke="#c8102e" stroke-width="9" stroke-linecap="round"/><path d="M48 15l5-6" stroke="#c9a227" stroke-width="10" stroke-linecap="round"/><circle cx="30" cy="37" r="8" fill="#c8102e"/><circle cx="30" cy="37" r="3" fill="#fff"/><path d="M56 3c4 2 6 6 5 11M60 1c3 3 4 7 3 11" stroke="#4fb3ff" stroke-width="2.5" fill="none" stroke-linecap="round"/><rect x="6" y="56" width="10" height="4" rx="2" fill="#2b2f36"/><rect x="44" y="56" width="10" height="4" rx="2" fill="#2b2f36"/></svg>`,
+esp:`<svg viewBox="0 0 64 64"><rect x="10" y="22" width="32" height="36" rx="5" fill="#ffc20e"/><path d="M10 32h32M10 48h32" stroke="#b8860b" stroke-width="2.5"/><rect x="13" y="25" width="4" height="30" rx="2" fill="#fff" opacity=".45"/><rect x="18" y="16" width="9" height="7" rx="1.5" fill="#2b2f36"/><rect x="17" y="36" width="18" height="8" rx="1.5" fill="#fff"/><path d="M20 40h12" stroke="#c8102e" stroke-width="2"/><circle cx="46" cy="16" r="8" fill="#fff" stroke="#7cc4ff" stroke-width="2.5"/><circle cx="56" cy="27" r="5.5" fill="#fff" stroke="#7cc4ff" stroke-width="2.5"/><circle cx="38" cy="7" r="4.5" fill="#fff" stroke="#7cc4ff" stroke-width="2.5"/><circle cx="57" cy="10" r="3" fill="#fff" stroke="#7cc4ff" stroke-width="2"/></svg>`,
+nfpa:`<svg viewBox="0 0 64 64"><path d="M6 14c9-4 18-4 26 2 8-6 17-6 26-2v38c-9-4-18-4-26 2-8-6-17-6-26-2z" fill="#fff"/><path d="M32 16v38" stroke="#14294d" stroke-width="2.5"/><path d="M11 22c6-2 11-2 16 1M11 30c6-2 11-2 16 1M11 38c6-2 11-2 16 1" stroke="#9fb4d6" stroke-width="2.2" fill="none"/><path d="M37 33l5 5 10-11" stroke="#ffc20e" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+hist:`<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="none" stroke="#c8102e" stroke-width="3"/><path d="M16 9v8l5 3" stroke="#17191d" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`,
+seg:`<svg viewBox="0 0 32 32"><path d="M16 3l11 4v8c0 7-5 12-11 14C10 27 5 22 5 15V7z" fill="#c8102e"/><rect x="11" y="14" width="10" height="8" rx="1.5" fill="#fff"/><path d="M13 14v-2a3 3 0 016 0v2" stroke="#fff" stroke-width="2" fill="none"/></svg>`,
+lock:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>`,
+back:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>`,
+plus:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
+sh:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>`,
+logo:`<svg viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#fff"/><rect x="24" y="20" width="17" height="34" rx="7" fill="#c8102e"/><rect x="24" y="30" width="17" height="9" fill="#ffc20e"/><rect x="28" y="12" width="9" height="9" rx="2" fill="#17191d"/><path d="M35 13h9l4 3M28 16c-7 0-10 5-10 11v9" stroke="#17191d" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`
+};
+
+/* ================= Definición de formatos ================= */
+const YN=['Sí','No'],SINO=['SI','NO'];
+const yn=(k,l,bad,h)=>({k,l,t:'sel',o:YN,bad:[bad],h});
+const EST=['Cumple','No Cumple','No Tiene','Sitio sin extintor','En mantenimiento','No aplica'],BADX=['No Cumple','No Tiene','Sitio sin extintor'];
+const BM=['Buen estado','Mal estado'],B3=['Bueno','Con novedades','Malo'],OPER=['OPERATIVO','NO OPERATIVO','CON NOVEDADES','N/A'],BOP=['NO OPERATIVO','CON NOVEDADES'];
+const PQS=['10 lbs','15 lbs','20 lbs','30 lbs','150 lbs','300 lbs','350 lbs'];
+const AG={'PQS (ABC / BC)':PQS,'PQS Púrpura K':PQS,'CO2 (dióxido de carbono)':['10 lbs','15 lbs','20 lbs','50 lbs','100 lbs','150 lbs'],'Agente limpio':['11,5 lbs','13,5 lbs','15 lbs','20 lbs','22 lbs','22,4 lbs','3700 g','9000 g'],'Agua':['2,5 gal'],'Acetato de potasio (Tipo K)':['6 lbs','9,46 lbs']};
+const comp=(k,l)=>({k,l,t:'sel',o:EST,bad:BADX,w:12});
+const GEL=[['Tiene candado',null],['Mangueras de 2½" x 100 pies',[2,1,1,1,0]],['Mangueras de 1½" x 100 pies',[2,2,2,2,1]],['Boquilla espuma con aspiración de aire 1½" (2)',[2,1,1,0,0]],['Boquilla espuma con aspiración de aire 2½" (2)',[2,1,1,0,0]],['Y reductora 2½" x 1½" x 1½"',[1,1,1,1,0]],['Boquilla galonaje variable 2½"',[1,1,1,1,1]],['Boquilla galonaje variable 1½"',[2,2,2,2,1]],['Llaves spanner',[2,1,1,1,0]],['Hacha',[0,0,0,1,1]],['Señalización',null],['Otro',null],['Otro',null]];
+const TIPOS=['Tipo I','Tipo II','Tipo III','Tipo IV','Tipo V'];
+const reqOf=(i,tipo)=>{const m=GEL[i][1];if(!m)return null;const t=TIPOS.indexOf(tipo);if(t<0)return undefined;return m[t]};
+const MONM=['AKRON BRASS 4" 500 - 1250 GPM','ELKHART 2½" 300 - 750 GPM','AKRON OZZIE 2½" 125 - 250 GPM','AKRON 2½" boquilla 500 GPM - TFT','Otro modelo'];
+
+const MODS={
+extintores:{title:'Extintores',full:'Formato de inspección de extintores',icon:'ext',months:1,freq:'Mensual',layout:'rows',unit:'Extintor',
+  ulabel:(u,i)=>'Extintor '+(u.tag||'#'+(i+1)),usub:u=>[u.ubic,u.agente,u.cap].filter(Boolean).join(' · '),
+  fields:[{k:'tag',l:'TAG',t:'text',keep:1,req:1,w:10},{k:'ubic',l:'Zona de ubicación',t:'text',keep:1,w:22},
+   {k:'tipo',l:'Tipo',t:'sel',o:['ABC','BC','BC cápsula externa','BC presurizado','A','K'],keep:1,w:14},
+   {k:'agente',l:'Agente extintor',t:'sel',o:Object.keys(AG),keep:1,dep:1,w:16},
+   {k:'cap',l:'Capacidad',t:'sel',of:u=>(AG[u.agente]||[]).concat(['Otra']),keep:1,w:10},
+   {k:'ul',l:'¿Listado UL y/o aprobado FM?',t:'sel',o:SINO,bad:['NO'],keep:1,w:9},{k:'rod',l:'¿Es extintor rodante?',t:'sel',o:SINO,keep:1,w:9},
+   {k:'venc',l:'Vencimiento mantenimiento',t:'date',keep:1,w:12,chk:(v,u,r)=>v&&r.h.fecha&&v<r.h.fecha?'Mantenimiento vencido el '+fmt(v):null},
+   {k:'pres',l:'Presión actual',t:'text',h:'psi o "zona verde"',w:10},
+   {k:'gen',l:'Estado general del extintor',t:'sel',o:EST,bad:BADX,w:12},
+   {g:'Elementos (marque novedades)'},comp('pin','Pintura / etiquetas'),comp('cil','Cilindro'),comp('man','Manguera / boquilla'),comp('pas','Pasador'),comp('mano','Manómetro'),comp('forro','Forro protector'),comp('sop','Soporte'),comp('sen','Señalización'),comp('rodm','Rodamiento'),
+   {k:'obs',l:'Observaciones',t:'area',wide:1,w:28}],
+  summary:r=>{const n=r.units.length,ok=r.units.filter(u=>u.gen==='Cumple').length;return[['Extintores',n],['Estado general cumple',ok],['Con novedad',r.units.filter(u=>BADX.includes(u.gen)).length]]}},
+scba:{title:'Equipos SCBA',full:'Formato de inspección de equipos de respiración autónoma y compresores de aire',sheet:'Inspección SCBA',icon:'scba',months:1,freq:'Mensual',layout:'cols',unit:'Equipo',group:'scba',
+  ulabel:(u,i)=>(u.clase==='Cilindro de repuesto'?'Cilindro repuesto ':'SCBA ')+(u.tag||'#'+(i+1)),usub:u=>[u.marca,u.modelo,u.serial&&'S/N '+u.serial].filter(Boolean).join(' · '),
+  fields:[{k:'clase',l:'Tipo de elemento',t:'sel',o:['SCBA','Cilindro de repuesto'],keep:1},
+   {g:'Aspectos generales del equipo'},{k:'marca',l:'Marca',t:'text',keep:1},{k:'modelo',l:'Modelo',t:'text',keep:1},{k:'anio',l:'Año fabricación',t:'num',keep:1},{k:'tag',l:'TAG del equipo',t:'text',keep:1,req:1},{k:'serial',l:'Número serial',t:'text',keep:1},
+   {k:'aniocil',l:'Año fabricación del cilindro',t:'num',keep:1,chk:(v,u,r)=>v&&r.h.fecha&&(+r.h.fecha.slice(0,4)-v)>=15?'Cilindro con 15 años o más de fabricación: verificar vida útil':null},
+   {k:'hidro',l:'Fecha prueba hidrostática del cilindro',t:'date',keep:1,chk:(v,u,r)=>v&&r.h.fecha&&yrs(v,r.h.fecha)>=5?'Prueba hidrostática de hace 5 años o más: verificar vigencia':null},
+   {k:'posi',l:'Fecha de Posicheck',t:'date',keep:1},{k:'posires',l:'Resultado prueba Posicheck',t:'sel',o:['Cumple','No Cumple'],bad:['No Cumple']},
+   {g:'Estado general del equipo'},{k:'careta',l:'Estado de la careta',t:'sel',o:B3,bad:['Con novedades','Malo']},{k:'cilindro',l:'Estado del cilindro',t:'sel',o:B3,bad:['Con novedades','Malo']},
+   {k:'presion',l:'Presión del cilindro (psi)',t:'num'},{k:'arnes',l:'Estado del arnés (mangueras, luces, correas, hebillas, manómetro)',t:'sel',o:B3,bad:['Con novedades','Malo']},
+   {k:'aire',l:'Fecha último cambio de aire',t:'date'},{k:'bat',l:'Estado de la batería',t:'sel',o:B3,bad:['Con novedades','Malo']},
+   {k:'batp',l:'Nivel de carga de la batería (%)',t:'num',chk:v=>v!==''&&v!=null&&+v<50?'Batería al '+v+'%: poner a cargar':null},
+   {k:'reg',l:'Regulador 1ª y 2ª etapa',t:'sel',o:B3,bad:['Con novedades','Malo']},{k:'alarma',l:'Alarma de baja presión',t:'sel',o:B3,bad:['Con novedades','Malo']},
+   {k:'pass',l:'Alarma hombre caído (PASS)',t:'sel',o:B3,bad:['Con novedades','Malo']},{k:'altavoz',l:'Funcionamiento del altavoz',t:'sel',o:B3,bad:['Con novedades','Malo']},
+   {k:'limp',l:'Limpieza general',t:'sel',o:['Bien','Se limpió','Requiere limpieza'],bad:['Requiere limpieza']}],
+  summary:r=>[['Equipos SCBA',r.units.filter(u=>u.clase!=='Cilindro de repuesto').length],['Cilindros repuesto',r.units.filter(u=>u.clase==='Cilindro de repuesto').length]]},
+compresor:{title:'Compresor SCBA',full:'Formato de inspección de equipos de respiración autónoma y compresores de aire',sheet:'Inspección compresor',icon:'comp',months:6,freq:'Semestral',layout:'cols',unit:'Compresor',single:1,group:'scba',
+  head:[{k:'marca',l:'Marca del compresor',t:'text',keep:1}],ulabel:()=>'Inspección del compresor',usub:()=>'Antes, durante y después del arranque',
+  fields:[{g:'Inspección previa'},{k:'gen',l:'Estado general (inspección visual)',t:'sel',o:['Bueno','Malo'],bad:['Malo']},{k:'aceite',l:'Nivel de aceite',t:'sel',o:['Alto','Óptimo','Bajo'],bad:['Bajo']},
+   {k:'filtro',l:'Estado general del filtro de aire',t:'sel',o:['Bueno','Malo'],bad:['Malo']},yn('comp','¿Compartimiento del filtro libre de obstrucciones?','No'),
+   {k:'hpre',l:'Horas de uso previo al encendido',t:'num'},yn('elec','¿Conexiones eléctricas en buen estado?','No'),
+   {k:'valv',l:'Válvula de seguridad (perilla dorada)',t:'sel',o:['Cerrada','Abierta'],bad:['Abierta'],h:'Debe estar completamente cerrada'},
+   {k:'acc',l:'Accesorios (mangueras, acoples, conectores, tubos de succión)',t:'sel',o:['Completos','Incompletos'],bad:['Incompletos']},
+   {g:'Durante el arranque'},yn('ruido','¿Hay ruidos extraños?','Sí'),yn('vib','¿Hay vibraciones excesivas?','Sí'),
+   {k:'fuga',l:'Válvulas, conexiones y mangueras',t:'sel',o:['Sin fuga','Con fuga'],bad:['Con fuga']},{k:'giro',l:'Aspas del ventilador',t:'sel',o:['Giro correcto','Giro incorrecto'],bad:['Giro incorrecto']},
+   yn('purga','¿Se purgó manualmente al terminar (perillas 1, 2 y 3)?','No'),
+   {g:'Después del arranque'},yn('desp','¿Se despresurizó la manguera?','No'),{k:'hpos',l:'Horas de uso posterior al encendido',t:'num'}],
+  grid:{k:'log',l:'Registro de horas de uso del compresor',cols:[{k:'f',l:'Fecha',t:'date'},{k:'hop',l:'Horas operativas',t:'text',ph:'10:32 - 14:25'},{k:'temp',l:'Temp. ambiente °C',t:'num'},{k:'min',l:'Tiempo de uso (min)',t:'num'}],
+    calc:x=>Math.round((+x.min||0)*0.7*10)/10,calcL:'Total (min) × factor 0,7'},
+  summary:r=>{const t=(r.grid?.log||[]).reduce((a,x)=>a+(+x.min||0)*0.7,0);return[['Minutos compensados registrados',Math.round(t)],['Cartucho (1200 min)',Math.min(100,Math.round(t/12))+'%']]}},
+mangueras:{title:'Mangueras CI',full:'Formato inspección mangueras contra incendios',icon:'mang',months:12,freq:'Anual',layout:'rows',unit:'Manguera',
+  ulabel:(u,i)=>'Manguera '+(u.tag||'#'+(i+1)),usub:u=>[u.tipo,u.ubic].filter(Boolean).join(' · '),
+  fields:[{k:'tag',l:'TAG',t:'text',keep:1,req:1,w:10},{k:'ubic',l:'Ubicación',t:'text',keep:1,w:20},{k:'tipo',l:'Tipo de manguera',t:'sel',o:['1½" x 100 pies','1½" x 50 pies','2½" x 100 pies','2½" x 50 pies'],keep:1,w:14},
+   {g:'Criterios de inspección'},{k:'acop',l:'Estado acoples',t:'sel',o:BM,bad:['Mal estado'],w:11},{k:'rosca',l:'Rosca hembra gira libremente',t:'sel',o:SINO,bad:['NO'],w:10},
+   {k:'emp',l:'Estado empaques',t:'sel',o:BM,bad:['Mal estado'],w:11},{k:'anillo',l:'Estado anillo interno',t:'sel',o:BM,bad:['Mal estado'],w:11},
+   {k:'cuerpo',l:'Cuerpo de la manguera',t:'sel',o:BM,bad:['Mal estado'],h:'Abrasión, quemaduras, deformaciones, moho',w:11},{k:'alm',l:'Almacenamiento',t:'sel',o:BM,bad:['Mal estado'],w:11},
+   {k:'fs',l:'Fuera de servicio',t:'sel',o:SINO,bad:['SI'],w:9},{k:'obs',l:'Observaciones',t:'area',wide:1,w:28}],
+  summary:r=>{const c={};r.units.forEach(u=>{if(u.tipo)c[u.tipo]=(c[u.tipo]||0)+1});return[['Mangueras',r.units.length],...Object.entries(c),['Fuera de servicio',r.units.filter(u=>u.fs==='SI').length]]}},
+gab_op:{title:'Gabinetes · áreas operativas',full:'Formato inspección de gabinetes contra incendios - áreas operativas y no operativas',sheet:'Áreas operativas',icon:'gab',months:6,freq:'Semestral',layout:'cols',unit:'Gabinete',group:'gab',
+  head:[{k:'tipo',l:'Tipo de estación',t:'sel',o:TIPOS,keep:1,dep:1,h:'Define la dotación requerida (Tipo V = estación de mangueras)'}],
+  ulabel:(u,i)=>'Gabinete '+(u.num||'#'+(i+1)),usub:u=>u.ubic||'',
+  fields:[{k:'num',l:'Gabinete No.',t:'text',keep:1,req:1},{k:'ubic',l:'Ubicación dentro de la estación',t:'text',keep:1},
+   {k:'acc',l:'Fácil acceso',t:'sel',o:SINO,bad:['NO']},{k:'corr',l:'Presenta corrosión',t:'sel',o:SINO,bad:['SI']},{k:'obst',l:'Libre de obstáculos',t:'sel',o:SINO,bad:['NO']},
+   {g:'Elementos: disponibilidad, cantidad y estado'},{k:'el',l:'Elementos',t:'matrix',wide:1},
+   {g:'Mangueras'},{k:'m1',l:'¿Moho, cortes, abrasiones o deterioro evidente?',t:'sel',o:SINO,bad:['SI']},{k:'m2',l:'¿Acople dañado?',t:'sel',o:SINO,bad:['SI']},{k:'m3',l:'¿Empaques faltantes o deteriorados?',t:'sel',o:SINO,bad:['SI']},
+   {g:'Boquillas'},{k:'b1',l:'¿Tiene obstrucciones?',t:'sel',o:SINO,bad:['SI']},{k:'b2',l:'¿Opera fácilmente?',t:'sel',o:SINO,bad:['NO']},{k:'b3',l:'¿Empaque faltante o deteriorado?',t:'sel',o:SINO,bad:['SI']},
+   {g:'Gabinete'},{k:'g1',l:'¿Difícil de abrir?',t:'sel',o:SINO,bad:['SI']},{k:'g2',l:'¿Tiene algún daño?',t:'sel',o:SINO,bad:['SI']},{k:'g3',l:'¿Manguera mal enrollada?',t:'sel',o:SINO,bad:['SI']},
+   {k:'otras',l:'Otras observaciones (chapa, puertas, bisagras, pintura, vidrio)',t:'area',wide:1}],
+  tail:[{k:'orden',l:'¿El lugar de almacenamiento está en correcto estado de orden y aseo?',t:'sel',o:SINO,bad:['NO']}],
+  summary:r=>[['Gabinetes',r.units.length],['Tipo de estación',r.h.tipo||'sin definir']]},
+gab_no:{title:'Gabinetes · áreas no operativas',full:'Formato inspección de gabinetes contra incendios - áreas operativas y no operativas',sheet:'Áreas no operativas',icon:'gab',months:6,freq:'Semestral',layout:'cols',unit:'Gabinete',group:'gab',
+  ulabel:(u,i)=>'Gabinete '+(u.num||'#'+(i+1)),usub:u=>u.ubic||'',
+  fields:[{k:'num',l:'No. de gabinete',t:'text',keep:1,req:1},{k:'ubic',l:'Ubicación',t:'text',keep:1},
+   {g:'1. Válvula de control'},yn('v1','¿La válvula está cerrada?','No'),yn('v2','Manómetro de presión: ¿presenta fugas?','Sí'),
+   {g:'2. Gabinete'},yn('g1','¿Libre acceso?','No'),yn('g2','¿Libre de obstáculos?','No'),yn('g3','¿Está señalizado (numerado, instrucción "rompa el vidrio")?','No'),
+   {g:'3. Mangueras'},yn('m1','¿Presenta daños?','Sí'),yn('m2','¿Está bien colocada (sin torsiones, separada de otros elementos)?','No'),yn('m3','¿Boquilla lista para usarla?','No'),yn('m4','¿Abre y cierra totalmente la boquilla?','No'),
+   {g:'4. Equipos adicionales'},yn('e1','¿Cuenta con hacha?','No'),yn('e2','¿Cuenta con llave spanner?','No'),yn('e3','¿Elementos bien ubicados en el interior?','No'),yn('e4','¿Están en buenas condiciones?','No'),yn('e5','¿Está el extintor?','No'),yn('e6','¿Tiene elementos extraños (sin función CI)?','Sí'),
+   {g:'5. Estado interno y externo'},yn('s1','¿Libre de corrosión?','No'),yn('s2','¿Puerta abre y cierra fácilmente?','No'),yn('s3','¿Vidrio en buenas condiciones?','No'),{k:'s4',l:'Sistema enrollado de manguera',t:'sel',o:['Sí','No','N/A']},
+   {g:'6. Línea de agua'},yn('l1','¿Está corroída?','Sí'),yn('l2','¿Está sujeta a cargas externas?','Sí')],
+  tail:[{k:'orden',l:'¿El lugar de almacenamiento está en correcto estado de orden y aseo?',t:'sel',o:SINO,bad:['NO']}],
+  summary:r=>[['Gabinetes',r.units.length]]},
+monitores:{title:'Monitores tipo araña',full:'Formato inspección monitores portátiles de agua tipo araña',icon:'mon',months:12,freq:'Anual',layout:'cols',unit:'Monitor',
+  ulabel:(u,i)=>'Monitor '+(u.placa||u.serial||'#'+(i+1)),usub:u=>u.modelo||'',
+  fields:[{k:'modelo',l:'Modelo',t:'sel',o:MONM,keep:1},{k:'serial',l:'Serial',t:'text',keep:1},{k:'placa',l:'No. de placa Cenit',t:'text',keep:1},
+   {g:'Inspección'},{k:'boq',l:'Boquilla',t:'sel',o:OPER,bad:BOP,h:'Gira o no gira; patrón de chorro obstruido / óptimo / deficiente'},{k:'cuerpo',l:'Cuerpo del monitor',t:'sel',o:['BUEN ESTADO','MAL ESTADO'],bad:['MAL ESTADO']},
+   {k:'vol',l:'Volante de movimiento vertical',t:'sel',o:OPER,bad:BOP,h:'Completo / incompleto, operativo / no operativo'},{k:'aseg',l:'Punto de aseguramiento movimiento horizontal',t:'sel',o:OPER,bad:BOP},
+   {k:'mano',l:'Manómetro',t:'sel',o:OPER,bad:BOP,h:'Suelto o carcasa partida = novedad'},{k:'anc',l:'Sistema de anclaje y aseguramiento de manguera',t:'sel',o:['BUEN ESTADO','MAL ESTADO'],bad:['MAL ESTADO']},
+   {k:'conx',l:'Conexión hembra',t:'sel',o:['BUEN ESTADO','MAL ESTADO'],bad:['MAL ESTADO']},{k:'limp',l:'¿Se realizó limpieza y engrase?',t:'sel',o:['SÍ','NO'],bad:['NO']},{k:'oper',l:'¿Está operativo el equipo?',t:'sel',o:['SÍ','NO'],bad:['NO']}],
+  summary:r=>[['Monitores',r.units.length],['Operativos',r.units.filter(u=>u.oper==='SÍ').length]]},
+espuma:{title:'Inventario de espuma',full:'Formato actualización del inventario de espumas contra incendios en estaciones',icon:'esp',months:12,freq:'Anual',layout:'rows',unit:'Recipiente',
+  ulabel:(u,i)=>(u.pres||'Recipiente')+' '+(u.lugar?'· '+u.lugar:'#'+(i+1)),usub:u=>[u.fab,u.tipo&&u.tipo.split(' - ')[0],u.vol&&u.vol+' gal'].filter(Boolean).join(' · '),
+  fields:[{k:'fab',l:'Fabricante',t:'sel',o:['National Foam (NF)','Angus Fire','Chemguard','Phos-Chek','Ansul','Williams Fire','3M','No registra'],keep:1,w:14},
+   {k:'met',l:'Método de aplicación',t:'sel',o:['Hidrante monitor de agua espuma','Sistema de vejiga','Proporcionador de espuma','Atención de incendios con líneas de mano','No aplica'],keep:1,w:18},
+   {k:'pres',l:'Presentación',t:'sel',o:['Bulkdrum','Caneca','Tanque vejiga','Tanque sistema proporcionador','Otro'],keep:1,w:12},
+   {k:'cap',l:'Capacidad (galones)',t:'num',keep:1,w:9},{k:'vol',l:'Volumen real (galones)',t:'num',w:9},
+   {k:'est',l:'Estado',t:'sel',o:['En servicio','Vencido','En servicio vencido','Reserva','Consumido'],bad:['Vencido','En servicio vencido'],w:12},
+   {k:'clas',l:'Clasificación de la espuma',t:'sel',o:['Proteínica','Sintética'],keep:1,w:11},
+   {k:'tipo',l:'Tipo de espuma',t:'sel',o:['AFFF - Espuma formadora de película acuosa','AR-AFFF - Formadora de película acuosa resistente a alcoholes','AR-FFFP - Fluoroproteínica formadora de película resistente a alcoholes','FFFP - Fluoroproteínica formadora de película','FP - Fluoroproteínica','SFFF - Sintética libre de flúor'],keep:1,w:22},
+   {k:'ffab',l:'Fecha de fabricación',t:'month',keep:1,w:10},{k:'lugar',l:'Lugar de almacenamiento / ubicación',t:'text',keep:1,w:18},
+   {k:'sga',l:'Rotulación SGA',t:'sel',o:['Buen estado','Mal estado','No tiene'],bad:['Mal estado','No tiene'],w:11},{k:'hds',l:'Hoja de datos de seguridad',t:'sel',o:['Buen estado','Mal estado','No tiene'],bad:['Mal estado','No tiene'],w:11},
+   {k:'prueba',l:'Fecha última prueba de espuma',t:'date',keep:1,w:12,chk:(v,u,r)=>v&&r.h.fecha&&yrs(v,r.h.fecha)>1?'Última prueba de espuma hace más de 12 meses':null},
+   {k:'com',l:'Comentarios (marca, modelo, lote, tag)',t:'area',wide:1,w:24},{k:'just',l:'Justificación de compra',t:'area',wide:1,w:20}],
+  summary:r=>{const s=(k)=>r.units.reduce((a,u)=>a+(+u[k]||0),0);return[['Recipientes',r.units.length],['Capacidad total (gal)',s('cap')],['Volumen real (gal)',s('vol')]]}}
+};
+const TILES=[{id:'extintores',n:'Extintores',ic:'ext',m:['extintores']},{id:'scba',n:'Equipos SCBA y compresor',ic:'scba',m:['scba','compresor'],b:[['SCBA mensual',0],['Compresor semestral',1]]},{id:'mangueras',n:'Mangueras contra incendio',ic:'mang',m:['mangueras']},
+ {id:'gab',n:'Gabinetes contra incendio',ic:'gab',m:['gab_op','gab_no'],b:[['Semestral',1]]},{id:'monitores',n:'Monitores portátiles tipo araña',ic:'mon',m:['monitores']},{id:'espuma',n:'Inventario de espuma',ic:'esp',m:['espuma']}];
+
+const NFPA={
+extintores:{std:'NFPA 10 — Extintores portátiles contra incendio',items:['Inspección visual mensual (aprox. cada 30 días): ubicación designada, acceso y visibilidad sin obstrucción, instrucciones legibles hacia el frente.','Pasador y sello de seguridad intactos; manómetro en zona operable; lleno (por peso o sopesado).','Sin daño físico evidente, corrosión, fugas ni boquilla obstruida.','Registro de cada inspección (fecha e inspector), en etiqueta o registro electrónico.','Mantenimiento anual por personal certificado; recarga y prueba hidrostática periódica según tipo de extintor.']},
+scba:{std:'NFPA 1850 (ed. 2026, reemplaza a NFPA 1852) — Selección, cuidado y mantenimiento de SCBA',items:['Inspección después de cada uso y como mínimo mensual: careta, arnés, cilindro, regulador, alarmas y PASS.','Verificar presión del cilindro, prueba de funcionamiento y alarma de baja presión.','Prueba de flujo (Posicheck) anual según procedimiento del fabricante.','Cilindros: prueba hidrostática y vida útil según la marca DOT/fabricante (en compuestos, típicamente cada 5 años y vida de 15 años).','Diseño y certificación del equipo: NFPA 1970 (antes NFPA 1981 y 1982 para PASS).']},
+compresor:{std:'NFPA 1989 — Calidad del aire respirable · Manual del fabricante',items:['El aire para cilindros SCBA debe cumplir la calidad de aire respirable y verificarse con muestreo periódico (NFPA 1989 exige análisis al menos trimestral).','Control de horas de operación y cambio del cartucho de purificación según el fabricante (en el formato: factor 0,7 y 1200 min).','Purga de condensados, nivel de aceite, filtro y válvula de seguridad antes y después del uso.','Frecuencia de inspección interna: semestral, con encendido semanal recomendado por el formato.']},
+mangueras:{std:'NFPA 1962 — Cuidado, uso, inspección y prueba de mangueras, acoples, boquillas y accesorios',items:['Inspección visual después de cada uso y como mínimo una vez al año.','Revisar acoples, roscas, empaques, cuerpo de la manguera (abrasión, cortes, quemaduras, moho) y fechas de prueba.','Prueba de servicio (presión) anual; retirar de servicio la manguera que falle.','Fabricación de mangueras nuevas: NFPA 1960 (2024), que consolidó NFPA 1961, 1963 y 1964.']},
+gab_op:{std:'NFPA 14 (instalación) · NFPA 25 (inspección, prueba y mantenimiento)',items:['NFPA 25: inspección de gabinetes, mangueras, boquillas y válvulas de manguera; accesibles, señalizados y sin obstrucciones.','Mangueras de gabinete: retirar y reinspeccionar periódicamente; reemplazar las deterioradas.','Dotación por tipo de estación según la Guía de dotación (tabla del formato).','Frecuencia interna del programa: semestral.']},
+monitores:{std:'NFPA 1962 (accesorios de manguera) · NFPA 25 (monitores fijos)',items:['Los monitores portátiles son accesorios de manguera: inspección visual tras cada uso y como mínimo anual.','Verificar giro de la boquilla, mecanismos de elevación y rotación, sistema de anclaje y conexiones.','Limpieza y lubricación de partes móviles; prueba de funcionamiento con agua.','Retirar de servicio el equipo no operativo hasta su reparación.']},
+espuma:{std:'NFPA 11 — Espumas de baja, media y alta expansión · NFPA 25 (sistemas agua-espuma)',items:['Muestra del concentrado de espuma enviada a laboratorio al menos una vez al año para verificar calidad.','Inventario de concentrado: cantidad, tipo, fabricante, fecha de fabricación y estado de recipientes.','Recipientes rotulados (SGA) con hoja de datos de seguridad disponible.','Mantener reserva suficiente según el diseño del sistema.']}
+};
+NFPA.gab_no=NFPA.gab_op;
+
+/* ================= Estado ================= */
+const S={key:null,recs:new Map(),cfg:{id:'cfg',mod:'cfg',insp:{},autolock:5,sig:''},kind:'pin',last:Date.now(),hiddenAt:0};
+const recsOf=m=>[...S.recs.values()].filter(r=>r.mod===m).sort((a,b)=>(b.h.fecha||'').localeCompare(a.h.fecha||'')||b.updated-a.updated);
+async function save(r){r.updated=Date.now();S.recs.set(r.id,r);const box=await seal(S.key,r);await DB.put('recs',r.id,{id:r.id,...box})}
+async function saveCfg(){const box=await seal(S.key,S.cfg);await DB.put('meta','cfg',box)}
+
+/* ================= UI genérica ================= */
+const root=$('#root');
+function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.append(d);setTimeout(()=>d.remove(),2600)}
+function dialog(html,btns){return new Promise(res=>{const d=document.createElement('div');d.className='dlg';d.innerHTML=`<div role="dialog" aria-modal="true">${html}<div class="btns">${btns.map((b,i)=>`<button class="btn ${b.c||''}" data-i="${i}">${esc(b.t)}</button>`).join('')}</div></div>`;document.body.append(d);
+  const inp=$('input,select,textarea',d);if(inp)setTimeout(()=>inp.focus(),50);
+  d.addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(b){const v=btns[+b.dataset.i].v;const vals={};$$('[name]',d).forEach(x=>vals[x.name]=x.type==='checkbox'?x.checked:x.value);d.remove();res(v===undefined?null:{v,vals})}else if(e.target===d){d.remove();res(null)}});
+  d.addEventListener('keydown',e=>{if(e.key==='Escape'){d.remove();res(null)}})})}
+const confirmD=async(t,msg,ok='Aceptar',c='p')=>!!(await dialog(`<h3>${esc(t)}</h3><p>${esc(msg)}</p>`,[{t:'Cancelar'},{t:ok,c,v:1}]))?.v;
+
+/* ================= Bloqueo / autenticación ================= */
+function lockScreen(mode,msg=''){
+  const setup=mode==='setup';
+  root.innerHTML=`<div class="lock"><form class="lockc" id="lf" autocomplete="off">
+   <div class="lg2">${IC.logo}<div><h1>Inspección de equipos y elementos CI</h1><span class="mut sm">Uso en campo, sin señal</span></div></div>
+   ${setup?`<p>Cree un PIN o clave para proteger la información. Todo lo que registre queda cifrado en este dispositivo y nunca se envía por internet.</p>
+   <div class="seg" id="kind" style="margin-bottom:12px"><button type="button" class="on" data-k="pin">PIN numérico</button><button type="button" data-k="pass">Clave alfanumérica</button></div>
+   <label class="f"><span>Nuevo PIN (mínimo 6 dígitos)</span><input id="p1" type="password" class="pinin" inputmode="numeric" autocomplete="new-password" required></label>
+   <label class="f"><span>Confirmar</span><input id="p2" type="password" class="pinin" inputmode="numeric" autocomplete="new-password" required></label>`
+   :`<p>Ingrese su ${S.kind==='pin'?'PIN':'clave'} para desbloquear.</p><label class="f"><span>${S.kind==='pin'?'PIN':'Clave'}</span><input id="p1" type="password" class="pinin" ${S.kind==='pin'?'inputmode="numeric"':''} autocomplete="current-password" required></label>`}
+   <div class="err" id="er" role="alert">${esc(msg)}</div>
+   <button class="btn p" style="width:100%" id="go">${setup?'Crear y entrar':'Desbloquear'}</button>
+   <div class="shield">${IC.sh}<span>Cifrado AES-256-GCM con clave derivada PBKDF2-SHA256 (600.000 iteraciones). La app no tiene conexión a internet ni servidores; si olvida el ${setup?'PIN':'PIN o clave'} los datos no se pueden recuperar.</span></div>
+   ${setup?'':`<button type="button" class="btn sm d" id="forgot" style="margin-top:10px">Olvidé el PIN: borrar todo y empezar</button>`}
+  </form></div>`;
+  let kind='pin';
+  const kb=$('#kind');if(kb)kb.onclick=e=>{const b=e.target.closest('button');if(!b)return;kind=b.dataset.k;$$('button',kb).forEach(x=>x.classList.toggle('on',x===b));
+    $$('#p1,#p2').forEach(i=>{i.inputMode=kind==='pin'?'numeric':'text';i.classList.toggle('pinin',kind==='pin')});$('#lf span').textContent=kind==='pin'?'Nuevo PIN (mínimo 6 dígitos)':'Nueva clave (mínimo 8 caracteres)'};
+  const fg=$('#forgot');if(fg)fg.onclick=async()=>{const r=await dialog(`<h3>Borrar todos los datos</h3><p>Sin el PIN no es posible descifrar la información. Esto elimina permanentemente todas las inspecciones de este dispositivo. Escriba <b>BORRAR</b> para confirmar.</p><input name="c" autocomplete="off">`,[{t:'Cancelar'},{t:'Borrar todo',c:'p',v:1}]);if(r&&r.vals.c==='BORRAR'){await DB.wipe();location.hash='';lockScreen('setup')}};
+  $('#lf').onsubmit=async e=>{e.preventDefault();const er=$('#er'),p1=$('#p1').value;
+    if(!window.crypto||!crypto.subtle){er.textContent='Este navegador no permite cifrado seguro. Abra la app instalada o en un navegador actualizado.';return}
+    $('#go').disabled=true;$('#go').textContent='Verificando…';
+    try{
+     if(setup){const p2=$('#p2').value;
+      if(kind==='pin'&&!/^\d{6,}$/.test(p1))throw new Error('El PIN debe tener al menos 6 dígitos.');
+      if(kind==='pass'&&p1.length<8)throw new Error('La clave debe tener al menos 8 caracteres.');
+      if(/^(\d)\1+$/.test(p1)||'0123456789'.includes(p1)||'9876543210'.includes(p1))throw new Error('Evite PIN repetidos o consecutivos.');
+      if(p1!==p2)throw new Error('Los valores no coinciden.');
+      const salt=crypto.getRandomValues(new Uint8Array(16));S.key=await derive(p1,salt,ITER);
+      await DB.put('meta','auth',{v:1,salt:b64(salt),iter:ITER,kind,check:await seal(S.key,{ok:'inspeccion-ci'})});S.kind=kind;
+      try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(x){}
+      await saveCfg();start();
+     }else{
+      const f=(await DB.get('meta','fails'))||{n:0,until:0};
+      if(Date.now()<f.until)throw new Error('Demasiados intentos. Espere '+Math.ceil((f.until-Date.now())/1000)+' s.');
+      const a=await DB.get('meta','auth');const k=await derive(p1,ub64(a.salt),a.iter);
+      try{await unseal(k,a.check)}catch(x){f.n++;f.until=f.n>=3?Date.now()+Math.min(900,15*2**(f.n-3))*1000:0;await DB.put('meta','fails',f);throw new Error('PIN o clave incorrectos ('+f.n+' intento'+(f.n>1?'s':'')+').')}
+      await DB.put('meta','fails',{n:0,until:0});S.key=k;
+      for(const b of await DB.all('recs')){try{const r=await unseal(k,b);S.recs.set(r.id,r)}catch(x){}}
+      const c=await DB.get('meta','cfg');if(c){try{Object.assign(S.cfg,await unseal(k,c))}catch(x){}}
+      start();
+     }
+    }catch(x){er.textContent=x.message;$('#go').disabled=false;$('#go').textContent=setup?'Crear y entrar':'Desbloquear'}
+  };
+  setTimeout(()=>{const i=$('#p1');i&&i.focus()},60);
+}
+async function lock(msg){clearTimeout(saveT);if(CUR&&S.key){try{await save(CUR)}catch(x){}}CUR=null;S.key=null;S.recs.clear();S.cfg={id:'cfg',mod:'cfg',insp:{},autolock:5,sig:''};$('#print').innerHTML='';$$('.dlg').forEach(d=>d.remove());lockScreen('unlock',msg||'')}
+['pointerdown','keydown','input'].forEach(ev=>addEventListener(ev,()=>S.last=Date.now(),{passive:true}));
+setInterval(()=>{if(S.key&&Date.now()-S.last>(S.cfg.autolock||5)*60000)lock('Sesión bloqueada por inactividad.')},15000);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)S.hiddenAt=Date.now();else if(S.key&&S.hiddenAt&&Date.now()-S.hiddenAt>180000)lock('Sesión bloqueada al salir de la app.')});
+
+/* ================= Navegación ================= */
+function start(){S.last=Date.now();route()}
+addEventListener('hashchange',()=>{if(S.key)route()});
+function go(h){if(location.hash==='#'+h)route();else location.hash=h}
+function route(){
+  const h=location.hash.slice(1);window.scrollTo(0,0);
+  if(h.startsWith('m-')&&MODS[h.slice(2).replace(/-/g,'_')])return modView(h.slice(2).replace(/-/g,'_'));
+  if(h.startsWith('e-')&&S.recs.get(h.slice(2)))return editor(S.recs.get(h.slice(2)));
+  if(h.startsWith('n-')&&MODS[h.slice(2).replace(/-/g,'_')])return nfpaView(h.slice(2).replace(/-/g,'_'));
+  if(h==='nfpa')return nfpaView();if(h==='historial')return histView();if(h==='seguridad')return secView();
+  home();
+}
+const mh=m=>m.replace(/_/g,'-');
+function bar(title,sub,back='inicio',extra=''){return `<div class="bar"><div class="wrap"><button class="ibtn" data-go="${back}" aria-label="Volver">${IC.back}</button><h2>${esc(title)}<small>${esc(sub)}</small></h2>${extra}</div></div>`}
+root.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g){e.preventDefault();go(g.dataset.go)}});
+
+/* ================= Vencimientos ================= */
+function dueInfo(m){
+  const def=MODS[m],last={};let draft=0;
+  recsOf(m).forEach(r=>{if(r.status!=='final'){draft++;return}const k=(r.h.estacion||'').trim().toUpperCase();if(!last[k]||r.h.fecha>last[k])last[k]=r.h.fecha});
+  const st=Object.entries(last).filter(([,f])=>f).map(([e,f])=>({e,next:addM(f,def.months)}));
+  const t=todayISO(),over=st.filter(x=>x.next<t);
+  if(over.length)return{c:'bad',t:`Vencida en ${over.length} estación${over.length>1?'es':''}`};
+  if(st.length){const n=st.sort((a,b)=>a.next.localeCompare(b.next))[0];return{c:'okk',t:'Próxima: '+fmt(n.next)+(st.length>1?' ('+n.e+')':'')}}
+  if(draft)return{c:'',t:draft+' borrador'+(draft>1?'es':'')+' en curso'};
+  return{c:'',t:'Sin inspecciones registradas'};
+}
+
+/* ================= Inicio ================= */
+function home(){
+  const nAll=[...S.recs.values()].length;
+  root.innerHTML=`${EMBED_NOTE?`<div class="ribbon">Vista previa: para trabajar sin señal, exportar e imprimir, instale la app en el celular (ver Seguridad y respaldo → Instalación).</div>`:''}
+  <header class="hero"><div class="wrap"><div class="top"><div class="brand">${IC.logo}<span>Programa de equipos CI</span></div><button class="ibtn" id="lk">${IC.lock}Bloquear</button></div>
+  <h1>Inspección de equipos y elementos CI</h1><p>Seleccione el equipo a inspeccionar. Funciona sin señal y la información queda cifrada solo en este dispositivo.</p>
+  <div class="chipline"><span>${IC.sh.replace('<svg','<svg width="16" height="16"')} Datos locales cifrados</span><span>${nAll} registro${nAll===1?'':'s'}</span><span>${fmt(todayISO())}</span></div></div></header>
+  <main class="wrap"><div class="tiles">${TILES.map(t=>{const d=t.m.map(dueInfo);const bad=d.find(x=>x.c==='bad');const di=bad||d[0];
+    return `<button class="tile" data-tile="${t.id}"><span class="ic">${IC[t.ic]}</span><b>${esc(t.n)}</b><span class="freq">${(t.b||t.m.map(m=>[MODS[m].freq,MODS[m].months>1])).map(([x,y])=>`<span class="badge ${y?'y':''}">${esc(x)}</span>`).join('')}</span><span class="due ${di.c}">${esc(di.t)}</span></button>`}).join('')}
+   <button class="tile nfpa" data-go="nfpa"><span class="ic">${IC.nfpa}</span><b>Normativa NFPA aplicada</b><span class="freq"><span class="badge y">Referencia</span></span><span class="due">Requisitos y frecuencias por equipo</span></button>
+  </div>
+  <div class="row3"><button class="mini" data-go="historial">${IC.hist}<span><b>Historial</b><small>Buscar y exportar</small></span></button><button class="mini" data-go="seguridad">${IC.seg}<span><b>Seguridad y respaldo</b><small>PIN, copia cifrada, instalación</small></span></button></div></main>`;
+  $('#lk').onclick=()=>lock();
+  $$('[data-tile]').forEach(b=>b.onclick=async()=>{const t=TILES.find(x=>x.id===b.dataset.tile);if(t.m.length===1)return go('m-'+mh(t.m[0]));
+    const r=await dialog(`<h3>${esc(t.n)}</h3><p class="mut">Seleccione el formato a diligenciar.</p><div class="list">${t.m.map(m=>`<button class="it" data-pick="${m}"><span class="ic" style="width:48px;height:48px">${IC[MODS[m].icon].replace('<svg','<svg width="44" height="44"')}</span><span class="t"><b>${esc(MODS[m].title)}</b><small>Frecuencia ${MODS[m].freq.toLowerCase()} · ${esc(dueInfo(m).t)}</small></span></button>`).join('')}</div>`,[{t:'Cerrar'}]);
+  });
+}
+document.addEventListener('click',pickHandler);
+function pickHandler(e){const p=e.target.closest('[data-pick]');if(p){const d=p.closest('.dlg');d&&d.remove();go('m-'+mh(p.dataset.pick))}}
+
+/* ================= Vista de módulo ================= */
+function modView(m){
+  const def=MODS[m],list=recsOf(m),d=dueInfo(m);
+  const st={};list.filter(r=>r.status==='final').forEach(r=>{const k=(r.h.estacion||'').trim().toUpperCase();if(!st[k])st[k]=r});
+  root.innerHTML=bar(def.title,'Frecuencia '+def.freq.toLowerCase())+`<main class="wrap pg">
+   <div class="card"><div class="mhead"><span class="ic">${IC[def.icon]}</span><div><b style="font-size:18px">${esc(def.full)}</b>${def.sheet?`<div class="sm mut">${esc(def.sheet)}</div>`:''}<div class="freq" style="margin-top:6px"><span class="badge ${def.months>1?'y':''}">Frecuencia ${def.freq.toLowerCase()}</span><button class="badge" style="border:0;background:#1f3f73" data-go="n-${mh(m)}">Ver NFPA</button></div><div class="due ${d.c}" style="margin-top:6px">${esc(d.t)}</div></div></div></div>
+   ${Object.keys(st).length?`<div class="card"><h3>Estado por estación</h3><div class="list">${Object.values(st).map(r=>{const n=addM(r.h.fecha,def.months),v=n<todayISO();return `<div class="it"><span class="t"><b>${esc(r.h.estacion)}</b><small>Última: ${fmt(r.h.fecha)} · Próxima: ${fmt(n)}</small></span><span class="pill ${v?'bad':'ok'}">${v?'Vencida':'Al día'}</span></div>`}).join('')}</div></div>`:''}
+   <div class="card"><h3>Inspecciones registradas</h3>${list.length?`<div class="list">${list.map(recItem).join('')}</div>`:`<p class="mut">Aún no hay inspecciones. Use <b>Nueva inspección</b> para empezar; la próxima vez podrá precargar los equipos de la estación.</p>`}</div>
+  </main><button class="btn p fab" id="nw">${IC.plus}Nueva inspección</button>`;
+  $('#nw').onclick=()=>newRec(m);
+}
+function recItem(r){const def=MODS[r.mod];const [y,mo,dd]=(r.h.fecha||'----').split('-');const f=findings(def,r).length;
+  return `<button class="it" data-go="e-${r.id}"><span class="datebox"><b>${esc(dd||'–')}</b><span>${esc(MES[+mo-1]||'')} ${esc((y||'').slice(2))}</span></span><span class="t"><b>${esc(r.h.estacion||'Sin estación')}</b><small>${esc(def.title)} · ${r.units.length} ${esc(def.unit.toLowerCase())}${r.units.length===1?'':'s'}${r.h.zona?' · '+esc(r.h.zona):''}</small></span>${r.status==='final'?(f?`<span class="pill bad">${f} hallazgo${f>1?'s':''}</span>`:`<span class="pill ok">Finalizada</span>`):`<span class="pill dr">Borrador</span>`}</button>`}
+async function newRec(m){
+  const def=MODS[m];const ests=[...new Set([...S.recs.values()].map(r=>r.h.estacion).filter(Boolean))];
+  const r=await dialog(`<h3>Nueva inspección · ${esc(def.title)}</h3>
+   <label class="f" style="margin-bottom:10px"><span>Estación</span><input name="est" list="dl-est" value="${esc(S.cfg.lastEst||'')}" autocomplete="off"><datalist id="dl-est">${ests.map(e=>`<option value="${esc(e)}">`).join('')}</datalist></label>
+   <label class="f" style="margin-bottom:10px"><span>Fecha de inspección</span><input name="fecha" type="date" value="${todayISO()}"></label>
+   <label style="display:flex;gap:10px;align-items:center;min-height:44px"><input type="checkbox" name="pre" checked style="width:22px;min-height:22px"> Precargar equipos de la última inspección de esta estación</label>`,[{t:'Cancelar'},{t:'Crear',c:'p',v:1}]);
+  if(!r)return;const est=r.vals.est.trim();if(!est){toast('Indique la estación');return}
+  const prev=recsOf(m).find(x=>(x.h.estacion||'').trim().toUpperCase()===est.toUpperCase());
+  const rec={id:uid(),mod:m,v:1,created:Date.now(),status:'borrador',h:{fecha:r.vals.fecha||todayISO(),estacion:est,zona:prev?.h.zona||''},units:[],grid:{},obs:'',plan:{req:'',rows:[]},insp:{...S.cfg.insp},firma:'',fotos:[]};
+  (def.head||[]).forEach(f=>{if(f.keep&&prev)rec.h[f.k]=prev.h[f.k]});
+  if(r.vals.pre&&prev){rec.units=prev.units.map(u=>{const n={};def.fields.forEach(f=>{if(f.keep)n[f.k]=u[f.k]});if(def.fields.some(f=>f.t==='matrix'))n.el=(u.el||[]).map(x=>({n:x&&x.n||''}));return n})}
+  if(def.single&&!rec.units.length)rec.units=[{}];
+  S.cfg.lastEst=est;saveCfg();await save(rec);go('e-'+rec.id);
+}
+
+/* ================= Hallazgos ================= */
+function flat(def){return def.fields.filter(f=>f.k)}
+function findings(def,r){const out=[];
+  r.units.forEach((u,i)=>{const lb=def.ulabel(u,i);flat(def).forEach(f=>{
+    if(f.t==='matrix'){(u.el||[]).forEach((x,j)=>{if(!x)return;const nm=GEL[j][0]==='Otro'?(x.n||'Otro'):GEL[j][0];const rq=reqOf(j,r.h.tipo);
+      if(x.e&&BOP.includes(x.e))out.push({u:i,t:`${lb}: ${nm} → ${x.e}`});
+      if(rq>0&&x.d==='NO')out.push({u:i,t:`${lb}: ${nm} no disponible (requerido ${rq})`});
+      else if(rq>0&&x.c!==''&&x.c!=null&&+x.c<rq)out.push({u:i,t:`${lb}: ${nm} cantidad ${x.c} de ${rq} requeridas`})});return}
+    const v=u[f.k];if(f.bad&&f.bad.includes(v))out.push({u:i,t:`${lb}: ${f.l} → ${v}`});
+    if(f.chk){const w=f.chk(v,u,r);if(w)out.push({u:i,t:`${lb}: ${w}`,w:1})}})});
+  (def.tail||[]).forEach(f=>{if(f.bad&&f.bad.includes(r.h[f.k]))out.push({u:-1,t:`${f.l} → ${r.h[f.k]}`})});
+  if(def.grid){const t=(r.grid[def.grid.k]||[]).reduce((a,x)=>a+def.grid.calc(x),0);if(t>=1080)out.push({u:-1,t:`Cartucho del compresor con ${Math.round(t)} de 1200 minutos compensados: programar cambio`,w:1})}
+  return out}
+function unitState(def,u,i,r){const fs=flat(def).filter(f=>f.t==='sel'&&!f.keep||f.req);const empty=fs.filter(f=>!u[f.k]).length;const nb=findings(def,{...r,units:[u]}).length;
+  return nb?`<span class="pill bad">${nb} hallazgo${nb>1?'s':''}</span>`:empty?`<span class="pill inc">${empty} pendiente${empty>1?'s':''}</span>`:`<span class="pill ok">Conforme</span>`}
+function progress(def,r){let t=0,f=0;r.units.forEach(u=>flat(def).forEach(x=>{if(x.t==='sel'||x.req){t++;if(u[x.k])f++}}));['fecha','estacion','zona'].forEach(k=>{t++;if(r.h[k])f++});t+=3;if(r.insp.nombre)f++;if(r.insp.cargo)f++;if(r.firma)f++;return t?Math.round(f/t*100):0}
+
+/* ================= Editor ================= */
+let CUR=null,saveT=null;
+function okVal(f){return f.ok||(f.o||[]).find(o=>!(f.bad||[]).includes(o)&&o!=='N/A'&&o!=='No aplica')}
+function fieldHTML(f,p,v,u,r){
+  const lab=`<span>${esc(f.l)}${f.req?' <em>*</em>':''}${f.h?`<span class="h"> · ${esc(f.h)}</span>`:''}</span>`;const isb=f.bad&&f.bad.includes(v);
+  const w=f.chk?f.chk(v,u,r):null;const wn=w?`<div class="warn">⚠ ${esc(w)}</div>`:'';
+  if(f.t==='sel'){const o=f.of?f.of(u):f.o;
+    if(o.length<=4&&o.join('').length<=44)return `<div class="f ${f.wide?'wide':''}">${lab}<div class="seg" data-p="${p}">${o.map(x=>`<button type="button" data-v="${esc(x)}" class="${v===x?'on '+((f.bad||[]).includes(x)?'bad':(f.bad?'good':'')):''}">${esc(x)}</button>`).join('')}</div>${wn}</div>`;
+    return `<label class="f ${f.wide?'wide':''}">${lab}<select data-p="${p}" class="${isb?'isbad':''}"><option value="">Seleccione…</option>${o.map(x=>`<option ${v===x?'selected':''}>${esc(x)}</option>`).join('')}</select>${wn}</label>`}
+  if(f.t==='area')return `<label class="f wide">${lab}<textarea data-p="${p}">${esc(v)}</textarea></label>`;
+  const ty={num:'number',date:'date',month:'month'}[f.t]||'text';
+  return `<label class="f ${f.wide?'wide':''}">${lab}<input data-p="${p}" type="${ty}" ${f.t==='num'?'inputmode="decimal" step="any"':''} value="${esc(v)}" autocomplete="off">${wn}</label>`}
+function matrixHTML(u,i,r){const el=u.el||[];
+  return `<div class="f wide">${!r.h.tipo?`<div class="warn">Seleccione el tipo de estación en Datos generales para calcular la cantidad requerida.</div>`:''}${GEL.map((g,j)=>{const x=el[j]||{};const rq=reqOf(j,r.h.tipo);const p=`u.${i}.el.${j}`;
+   return `<div class="el"><div class="nm">${g[0]==='Otro'?`<input data-p="${p}.n" placeholder="Otro elemento: nombre" value="${esc(x.n)}">`:esc(g[0])}</div><div class="ctl">
+    <div class="seg" data-p="${p}.d">${SINO.map(o=>`<button type="button" data-v="${o}" class="${x.d===o?'on '+(o==='NO'&&rq>0?'bad':'good'):''}">${o}</button>`).join('')}</div>
+    <div class="req">Req.<b>${rq===null?'—':rq===undefined?'?':rq===0?'N.A.':rq}</b></div>
+    <input data-p="${p}.c" type="number" inputmode="numeric" placeholder="Cant." value="${esc(x.c)}" aria-label="Cantidad en inspección">
+    <select data-p="${p}.e" class="${BOP.includes(x.e)?'isbad':''}" aria-label="Estado"><option value="">Estado…</option>${OPER.map(o=>`<option ${x.e===o?'selected':''}>${o}</option>`).join('')}</select></div></div>`}).join('')}
+   <div class="sm mut" style="margin-top:6px">(2) Aplica únicamente si la estación dispone de red o equipos portátiles de generación de espuma.</div></div>`}
+function unitBody(def,r,i){const u=r.units[i];let h='<div class="grid">';
+  def.fields.forEach(f=>{if(f.g){h+=`<div class="grp">${esc(f.g)}</div>`;return}h+=f.t==='matrix'?matrixHTML(u,i,r):fieldHTML(f,`u.${i}.${f.k}`,u[f.k]??'',u,r)});
+  h+='</div>';if(!def.single)h+=`<div class="uact"><button type="button" class="btn g sm" data-act="allok" data-i="${i}">✓ Todo conforme</button><button type="button" class="btn sm" data-act="dup" data-i="${i}">Duplicar</button><button type="button" class="btn sm d" data-act="del" data-i="${i}">Eliminar</button></div>`;
+  else h+=`<div class="uact"><button type="button" class="btn g sm" data-act="allok" data-i="${i}">✓ Todo conforme</button></div>`;return h}
+function unitHTML(def,r,i,open){const u=r.units[i];return `<details class="u" data-u="${i}" ${open?'open':''}><summary><span class="t">${esc(def.ulabel(u,i))}<small>${esc(def.usub(u)||'Toque para diligenciar')}</small></span><span data-st>${unitState(def,u,i,r)}</span></summary><div class="ub">${unitBody(def,r,i)}</div></details>`}
+function gridHTML(def,r){const g=def.grid,rows=r.grid[g.k]||[];
+  return `<div class="card"><h3>${esc(g.l)}</h3><div style="overflow-x:auto"><table class="lg"><thead><tr>${g.cols.map(c=>`<th>${esc(c.l)}</th>`).join('')}<th>${esc(g.calcL)}</th><th></th></tr></thead><tbody>${rows.map((x,j)=>`<tr>${g.cols.map(c=>`<td style="min-width:${c.t==='date'?150:c.t==='num'?84:130}px"><input data-p="g.${g.k}.${j}.${c.k}" type="${c.t==='num'?'number':c.t}" ${c.t==='num'?'inputmode="decimal"':''} placeholder="${esc(c.ph||'')}" value="${esc(x[c.k])}"></td>`).join('')}<td><b data-calc="${j}">${g.calc(x)}</b></td><td><button class="btn sm d" data-act="gdel" data-i="${j}" aria-label="Eliminar fila">✕</button></td></tr>`).join('')}</tbody></table></div>
+   <div class="btns" style="margin-top:10px"><button class="btn sm" data-act="gadd">${IC.plus}Agregar registro</button></div><p class="sm mut">El factor de compensación 0,7 corresponde al tiempo de descanso del equipo por ciclo de 15 min (no modificable).</p></div>`}
+function sumHTML(def,r){return def.summary?`<div class="sumbox">${def.summary(r).map(([a,b])=>`<span>${esc(a)}: <b>${esc(b)}</b></span>`).join('')}</div>`:''}
+function editor(r){
+  CUR=r;const def=MODS[r.mod];const many=r.units.length>3;
+  root.innerHTML=bar(def.title,(r.h.estacion||'')+(r.h.fecha?' · '+fmt(r.h.fecha):''),'m-'+mh(r.mod),`<span class="savest" id="ss">${r.status==='final'?'Finalizada':'Guardado'}</span>`)+`<div class="prog" style="position:sticky;top:0"><i id="pg"></i></div>
+  <main class="wrap pg" id="ed">
+   <section class="card"><h3><span class="n">1</span>Datos generales</h3><div class="grid">
+    ${fieldHTML({l:'Fecha de inspección',t:'date',req:1},'h.fecha',r.h.fecha,{},r)}${fieldHTML({l:'Estación',t:'text',req:1},'h.estacion',r.h.estacion,{},r)}${fieldHTML({l:'Zona',t:'text',req:1},'h.zona',r.h.zona,{},r)}
+    ${(def.head||[]).map(f=>fieldHTML(f,'h.'+f.k,r.h[f.k]??'',{},r)).join('')}</div></section>
+   <section class="card"><h3><span class="n">2</span>${def.single?'Inspección':esc(def.unit)+'s inspeccionados'}</h3><div id="sum">${sumHTML(def,r)}</div>
+    <div id="units">${r.units.map((u,i)=>unitHTML(def,r,i,!many)).join('')}</div>
+    ${def.single?'':`<div class="btns"><button class="btn k" data-act="add">${IC.plus}Agregar ${esc(def.unit.toLowerCase())}</button>${r.units.length?`<button class="btn sm" data-act="exp">Expandir / contraer</button>`:''}</div>`}
+    ${r.units.length?'':`<p class="mut sm">Agregue cada ${esc(def.unit.toLowerCase())} que inspecciona. Los datos fijos (TAG, ubicación, serial) se recuerdan para la próxima inspección.</p>`}</section>
+   ${def.grid?gridHTML(def,r):''}
+   <section class="card"><h3><span class="n">3</span>Observaciones y evidencias</h3><div class="grid">${(def.tail||[]).map(f=>fieldHTML(f,'h.'+f.k,r.h[f.k]??'',{},r)).join('')}${fieldHTML({l:'Observaciones generales',t:'area'},'obs',r.obs,{},r)}</div>
+    <div class="btns" style="margin-top:12px"><label class="btn">📷 Agregar foto<input type="file" accept="image/*" capture="environment" multiple id="ph" class="hide"></label></div><div class="fotos" id="fotos">${fotosHTML(r)}</div></section>
+   <section class="card"><h3><span class="n">4</span>Hallazgos y plan de mejora</h3><div id="finds"></div>
+    ${fieldHTML({l:'¿Se requiere definir un plan de mejora?',t:'sel',o:SINO},'plan.req',r.plan.req,{},r)}<div id="plan"></div></section>
+   <section class="card"><h3><span class="n">5</span>Responsable de la inspección</h3><div class="grid">${fieldHTML({l:'Nombre del funcionario que realiza la inspección',t:'text',req:1},'insp.nombre',r.insp.nombre||'',{},r)}${fieldHTML({l:'Cargo',t:'text',req:1},'insp.cargo',r.insp.cargo||'',{},r)}</div>
+    <div class="f" style="margin-top:12px"><span>Firma <em>*</em></span><canvas class="sig" id="sig" aria-label="Área de firma"></canvas></div>
+    <div class="btns" style="margin-top:8px"><button class="btn sm" data-act="sigclr">Limpiar firma</button>${S.cfg.sig?`<button class="btn sm" data-act="sigme">Usar mi firma guardada</button>`:''}<button class="btn sm" data-act="sigsave">Guardar como mi firma</button></div></section>
+   <section class="card"><h3>Exportar</h3><p class="sm mut">Los archivos exportados salen sin cifrar: guárdelos o compártalos solo por canales autorizados.</p><div class="btns"><button class="btn" data-act="xlsx">Excel (.xlsx)</button><button class="btn" data-act="pdf">PDF / imprimir</button>${navigator.canShare?`<button class="btn" data-act="share">Compartir…</button>`:''}<button class="btn sm d" data-act="rdel">Eliminar inspección</button></div></section>
+  </main><div class="foot"><div class="wrap"><button class="btn" data-go="m-${mh(r.mod)}">Guardar y salir</button><button class="btn p" data-act="fin">${r.status==='final'?'Actualizar finalizada':'Finalizar inspección'}</button></div></div>`;
+  renderFinds();renderPlan();upProg();sigInit();
+  const ed=$('#ed');
+  ed.addEventListener('input',onInput);ed.addEventListener('change',onInput);ed.addEventListener('click',onClick);$('.foot').addEventListener('click',onClick);
+  $('#ph').onchange=addFotos;
+}
+const pk=p=>{const k=p.split('.');if(k[0]==='u')k[0]='units';if(k[0]==='g')k[0]='grid';return k};
+function setP(o,p,v){const k=pk(p);let x=o;for(let i=0;i<k.length-1;i++){const n=/^\d+$/.test(k[i+1]);if(x[k[i]]==null)x[k[i]]=n?[]:{};x=x[k[i]]}x[k[k.length-1]]=v}
+function getP(o,p){return pk(p).reduce((a,k)=>a==null?a:a[k],o)}
+function touch(){$('#ss').textContent='Guardando…';clearTimeout(saveT);saveT=setTimeout(async()=>{if(!CUR||!S.key)return;await save(CUR);const s=$('#ss');if(s)s.textContent='Guardado ✓'},500)}
+function upUnit(i){const def=MODS[CUR.mod],d=$(`details[data-u="${i}"]`);if(!d)return;const u=CUR.units[i];$('.t',d).innerHTML=`${esc(def.ulabel(u,i))}<small>${esc(def.usub(u)||'Toque para diligenciar')}</small>`;$('[data-st]',d).innerHTML=unitState(def,u,i,CUR)}
+function upAll(){const def=MODS[CUR.mod];$('#sum').innerHTML=sumHTML(def,CUR);renderFinds();if(CUR.plan.req!=='SI')renderPlan();upProg()}
+function upProg(){$('#pg').style.width=progress(MODS[CUR.mod],CUR)+'%'}
+function onInput(e){const el=e.target;const p=el.dataset.p;if(!p)return;let v=el.value;setP(CUR,p,v);const def=MODS[CUR.mod];
+  if(el.tagName==='SELECT'){const f=fieldByPath(def,p);el.classList.toggle('isbad',!!(f&&f.bad&&f.bad.includes(v))||(/\.el\.\d+\.e$/.test(p)&&BOP.includes(v)))}
+  afterChange(p,e.type==='change');touch()}
+function fieldByPath(def,p){const k=p.split('.');if(k[0]==='u')return def.fields.find(f=>f.k===k[2]);if(k[0]==='h')return(def.head||[]).concat(def.tail||[]).find(f=>f.k===k[1]);return null}
+function afterChange(p,full){const def=MODS[CUR.mod],k=p.split('.');
+  if(k[0]==='u'){const i=+k[1];const f=def.fields.find(x=>x.k===k[2]);
+    if(full&&(f&&(f.dep||f.chk)||k[2]==='el')){const d=$(`details[data-u="${i}"] .ub`);if(d&&f&&f.dep){if(f.k==='agente')CUR.units[i].cap='';d.innerHTML=unitBody(def,CUR,i)}else if(d&&f&&f.chk){const lab=$(`[data-p="${p}"]`).closest('.f');const w=f.chk(getP(CUR,p),CUR.units[i],CUR);const o=$('.warn',lab);if(o)o.remove();if(w)lab.insertAdjacentHTML('beforeend',`<div class="warn">⚠ ${esc(w)}</div>`)}}
+    upUnit(i)}
+  if(k[0]==='h'&&full){if(k[1]==='tipo'||k[1]==='fecha')$$('#units details').forEach(d=>{const i=+d.dataset.u;$('.ub',d).innerHTML=unitBody(def,CUR,i);upUnit(i)})}
+  if(k[0]==='g'){const j=+k[2];const c=$(`[data-calc="${j}"]`);if(c)c.textContent=def.grid.calc(CUR.grid[def.grid.k][j])}
+  if(k[0]==='insp'){S.cfg.insp[k[1]]=getP(CUR,p);saveCfg()}
+  upAll()}
+async function onClick(e){
+  const sb=e.target.closest('.seg button');
+  if(sb){const seg=sb.parentElement,p=seg.dataset.p,v=sb.dataset.v;const cur=getP(CUR,p);const nv=cur===v?'':v;setP(CUR,p,nv);const def=MODS[CUR.mod];
+    let f=fieldByPath(def,p);if(p==='plan.req')f={bad:null};
+    const isEl=/\.el\.\d+\.d$/.test(p);$$('button',seg).forEach(b=>{b.className='';if(b.dataset.v===nv){b.className='on '+(isEl?(nv==='NO'?'bad':'good'):(f&&f.bad?(f.bad.includes(nv)?'bad':'good'):''))}});
+    afterChange(p,true);if(p==='plan.req')renderPlan();touch();return}
+  const a=e.target.closest('[data-act]');if(!a)return;const act=a.dataset.act,i=+a.dataset.i,def=MODS[CUR.mod];
+  if(act==='add'){CUR.units.push({});const n=CUR.units.length-1;$$('#units details').forEach(d=>d.open=false);$('#units').insertAdjacentHTML('beforeend',unitHTML(def,CUR,n,true));if(n===0)editor(CUR);else $(`details[data-u="${n}"]`).scrollIntoView({behavior:'smooth',block:'start'});upAll();touch()}
+  if(act==='exp'){const ds=$$('#units details');const o=!ds.some(d=>d.open);ds.forEach(d=>d.open=o)}
+  if(act==='dup'){const c=JSON.parse(JSON.stringify(CUR.units[i]));if(c.tag)c.tag='';if(c.num)c.num='';CUR.units.splice(i+1,0,c);rerenderUnits(i+1);touch()}
+  if(act==='del'){if(await confirmD('Eliminar','¿Eliminar '+def.ulabel(CUR.units[i],i)+' de esta inspección?','Eliminar')){CUR.units.splice(i,1);rerenderUnits();touch()}}
+  if(act==='allok'){const u=CUR.units[i];def.fields.forEach(f=>{if(f.t==='sel'&&!f.keep&&f.bad)u[f.k]=okVal(f)});if(def.fields.some(f=>f.t==='matrix')){u.el=u.el||[];GEL.forEach((g,j)=>{const x=u.el[j]=u.el[j]||{};const rq=reqOf(j,CUR.h.tipo);if(rq===0){x.d=x.d||'NO';x.e=x.e||'N/A';return}x.d='SI';if(rq>0&&(x.c===''||x.c==null))x.c=String(rq);x.e='OPERATIVO'})}
+    $(`details[data-u="${i}"] .ub`).innerHTML=unitBody(def,CUR,i);upUnit(i);upAll();touch();toast('Marcado como conforme. Ajuste lo que tenga novedad.')}
+  if(act==='gadd'){const g=def.grid;(CUR.grid[g.k]=CUR.grid[g.k]||[]).push({f:todayISO()});rerenderGrid();touch()}
+  if(act==='gdel'){CUR.grid[def.grid.k].splice(i,1);rerenderGrid();touch()}
+  if(act==='padd'){CUR.plan.rows.push({});renderPlan();touch()}
+  if(act==='pdel'){CUR.plan.rows.splice(i,1);renderPlan();touch()}
+  if(act==='pgen'){const have=new Set(CUR.plan.rows.map(x=>x.sit));findings(def,CUR).forEach(f=>{if(!have.has(f.t))CUR.plan.rows.push({sit:f.t,acc:'',ent:'',resp:'',fv:addM(todayISO(),1)})});CUR.plan.req='SI';
+    const sg=$('[data-p="plan.req"]');$$('button',sg).forEach(b=>b.className=b.dataset.v==='SI'?'on':'');renderPlan();touch()}
+  if(act==='fdel'){CUR.fotos.splice(i,1);$('#fotos').innerHTML=fotosHTML(CUR);touch()}
+  if(act==='sigclr'){CUR.firma='';sigInit();touch();upProg()}
+  if(act==='sigsave'){if(!CUR.firma){toast('Primero firme en el recuadro');return}S.cfg.sig=CUR.firma;await saveCfg();toast('Firma guardada cifrada en este dispositivo')}
+  if(act==='sigme'){CUR.firma=S.cfg.sig;sigInit();touch();upProg()}
+  if(act==='fin')finalize();
+  if(act==='xlsx')exportX(CUR);if(act==='pdf')printRec(CUR);if(act==='share')shareX(CUR);
+  if(act==='rdel'){if(await confirmD('Eliminar inspección','Se eliminará permanentemente esta inspección del dispositivo.','Eliminar')){S.recs.delete(CUR.id);await DB.del('recs',CUR.id);const m=CUR.mod;CUR=null;go('m-'+mh(m))}}
+}
+function rerenderUnits(open){const def=MODS[CUR.mod];$('#units').innerHTML=CUR.units.map((u,i)=>unitHTML(def,CUR,i,i===open||CUR.units.length<=3)).join('');upAll()}
+function rerenderGrid(){const old=$$('#ed .card').find(c=>c.querySelector('table.lg'));const n=document.createElement('div');n.innerHTML=gridHTML(MODS[CUR.mod],CUR);old.replaceWith(n.firstElementChild);upAll()}
+function renderFinds(){const fs=findings(MODS[CUR.mod],CUR);const el=$('#finds');if(!el)return;
+  el.innerHTML=fs.length?`<div class="warn" style="margin-bottom:12px;background:var(--badb)"><b>${fs.length} hallazgo${fs.length>1?'s':''} detectado${fs.length>1?'s':''}</b><ul class="find">${fs.map(f=>`<li>${esc(f.t)}</li>`).join('')}</ul></div>`:`<p class="mut sm">Sin hallazgos hasta ahora.</p>`}
+function renderPlan(){const el=$('#plan');if(!el)return;const rows=CUR.plan.rows;
+  if(CUR.plan.req!=='SI'){el.innerHTML=findings(MODS[CUR.mod],CUR).length?`<div class="btns" style="margin-top:10px"><button class="btn sm" data-act="pgen">Crear plan desde hallazgos</button></div>`:'';return}
+  el.innerHTML=rows.map((x,j)=>`<div class="card" style="background:var(--field);margin-top:12px"><div class="grid">
+   ${fieldHTML({l:'Situación evidenciada',t:'area'},`plan.rows.${j}.sit`,x.sit||'',{},CUR)}${fieldHTML({l:'Acción de mejora',t:'area'},`plan.rows.${j}.acc`,x.acc||'',{},CUR)}
+   ${fieldHTML({l:'Entregable',t:'text'},`plan.rows.${j}.ent`,x.ent||'',{},CUR)}${fieldHTML({l:'Responsable',t:'text'},`plan.rows.${j}.resp`,x.resp||'',{},CUR)}${fieldHTML({l:'Fecha de vencimiento',t:'date'},`plan.rows.${j}.fv`,x.fv||'',{},CUR)}</div>
+   <div class="uact"><button class="btn sm d" data-act="pdel" data-i="${j}">Quitar acción</button></div></div>`).join('')+`<div class="btns" style="margin-top:12px"><button class="btn sm" data-act="padd">${IC.plus}Agregar acción</button><button class="btn sm" data-act="pgen">Crear desde hallazgos</button></div>`}
+async function finalize(){const def=MODS[CUR.mod],r=CUR,miss=[];
+  if(!r.h.fecha)miss.push('Fecha de inspección');if(!r.h.estacion)miss.push('Estación');if(!r.h.zona)miss.push('Zona');
+  (def.head||[]).forEach(f=>{if(!r.h[f.k]&&f.t==='sel')miss.push(f.l)});
+  if(!r.units.length)miss.push('Al menos un '+def.unit.toLowerCase());
+  r.units.forEach((u,i)=>{const p=flat(def).filter(f=>(f.t==='sel'&&!f.keep)||f.req).filter(f=>!u[f.k]).length;if(p)miss.push(def.ulabel(u,i)+': '+p+' campo'+(p>1?'s':'')+' sin diligenciar')});
+  if(!r.insp.nombre)miss.push('Nombre del funcionario');if(!r.insp.cargo)miss.push('Cargo');if(!r.firma)miss.push('Firma');
+  const fs=findings(def,r);if(fs.filter(f=>!f.w).length&&r.plan.req!=='SI')miss.push('Hay hallazgos: defina el plan de mejora (SI) o justifique en observaciones');
+  if(!r.plan.req)miss.push('¿Se requiere plan de mejora? (SI/NO)');
+  if(miss.length){const x=await dialog(`<h3>Faltan datos</h3><ul class="find">${miss.slice(0,14).map(m=>`<li>${esc(m)}</li>`).join('')}${miss.length>14?`<li>y ${miss.length-14} más…</li>`:''}</ul>`,[{t:'Seguir editando',c:'p'},{t:'Finalizar de todos modos',v:1}]);if(!x||!x.v)return}
+  r.status='final';await save(r);$('#ss').textContent='Finalizada';
+  const x=await dialog(`<h3>Inspección finalizada</h3><p>${esc(def.title)} · ${esc(r.h.estacion)} · ${fmt(r.h.fecha)}. Próxima inspección: <b>${fmt(addM(r.h.fecha,def.months))}</b>.</p>`,[{t:'Excel (.xlsx)',v:'x'},{t:'PDF',v:'p'},{t:'Listo',c:'p',v:'ok'}]);
+  if(x&&x.v==='x')exportX(r);else if(x&&x.v==='p')printRec(r);else go('m-'+mh(r.mod))}
+
+/* ================= Fotos y firma ================= */
+function fotosHTML(r){return (r.fotos||[]).map((f,i)=>`<figure><img src="${f.startsWith('data:image/')?f:''}" alt="Evidencia ${i+1}"><button data-act="fdel" data-i="${i}" aria-label="Quitar foto">✕</button></figure>`).join('')}
+async function addFotos(e){for(const file of e.target.files){try{const url=await shrink(file);CUR.fotos.push(url)}catch(x){toast('No se pudo leer la imagen')}}e.target.value='';$('#fotos').innerHTML=fotosHTML(CUR);touch()}
+function shrink(file){return new Promise((res,rej)=>{const img=new Image(),u=URL.createObjectURL(file);img.onload=()=>{const m=1280,s=Math.min(1,m/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=img.width*s;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',.72))};img.onerror=rej;img.src=u})}
+function sigInit(){const c=$('#sig');if(!c)return;const dpr=window.devicePixelRatio||1;const w=c.clientWidth,h=c.clientHeight;c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.scale(dpr,dpr);x.lineWidth=2.4;x.lineCap='round';x.lineJoin='round';x.strokeStyle='#111';
+  x.fillStyle='#fff';x.fillRect(0,0,w,h);if(CUR.firma&&CUR.firma.startsWith('data:image/')){const i=new Image();i.onload=()=>x.drawImage(i,0,0,w,h);i.src=CUR.firma}else{x.fillStyle='#bbb';x.font='14px system-ui';x.fillText('Firme aquí con el dedo',12,h-14)}
+  let dn=false,blank=!CUR.firma;const pt=e=>{const b=c.getBoundingClientRect();return[e.clientX-b.left,e.clientY-b.top]};
+  c.onpointerdown=e=>{dn=true;c.setPointerCapture(e.pointerId);if(blank){x.fillStyle='#fff';x.fillRect(0,0,w,h);blank=false}const[a,b]=pt(e);x.beginPath();x.moveTo(a,b)};
+  c.onpointermove=e=>{if(!dn)return;const[a,b]=pt(e);x.lineTo(a,b);x.stroke()};
+  c.onpointerup=c.onpointercancel=()=>{if(!dn)return;dn=false;CUR.firma=c.toDataURL('image/png');touch();upProg()}}
+
+/* ================= Exportación XLSX (sin librerías) ================= */
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc32=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC[(c^b[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0};
+function zip(files){const parts=[],cen=[];let off=0;
+  for(const f of files){const nm=te.encode(f.name),d=te.encode(f.data),c=crc32(d);
+    const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(12,0x21,true);h.setUint32(14,c,true);h.setUint32(18,d.length,true);h.setUint32(22,d.length,true);h.setUint16(26,nm.length,true);
+    parts.push(new Uint8Array(h.buffer),nm,d);
+    const z=new DataView(new ArrayBuffer(46));z.setUint32(0,0x02014b50,true);z.setUint16(4,20,true);z.setUint16(6,20,true);z.setUint16(8,0x0800,true);z.setUint16(14,0x21,true);z.setUint32(16,c,true);z.setUint32(20,d.length,true);z.setUint32(24,d.length,true);z.setUint16(28,nm.length,true);z.setUint32(42,off,true);
+    cen.push(new Uint8Array(z.buffer),nm);off+=30+nm.length+d.length}
+  const cs=cen.reduce((a,b)=>a+b.length,0);const e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...cen,new Uint8Array(e.buffer)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})}
+const colL=n=>{let s='';n++;while(n){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26)}return s};
+const xesc=s=>String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function cellV(f,v,r){if(v==null||v==='')return{v:'',s:3};let t=f.t==='date'||f.t==='month'?fmt(v):v;if(f.t==='num'&&v!==''&&!isNaN(+v))t=+v;return{v:t,s:f.bad&&f.bad.includes(v)?4:3}}
+function buildRows(def,r){
+  const R=[],M=[],F=flat(def);const rowsL=def.layout==='rows';const W=Math.max(rowsL?F.length+1:r.units.length+1,6);
+  const add=a=>R.push(a);const span=(a)=>{M.push(`A${R.length}:${colL(W-1)}${R.length}`)};
+  add([{v:def.full.toUpperCase(),s:1}]);span();if(def.sheet){add([{v:def.sheet,s:0}]);span()}add([]);
+  const hd=[['Fecha de inspección',fmt(r.h.fecha)],['Estación',r.h.estacion],['Zona',r.h.zona],...(def.head||[]).map(f=>[f.l,r.h[f.k]||''])];
+  hd.forEach(([a,b])=>add([{v:a,s:5},{v:b||'',s:3}]));
+  const sm=def.summary?def.summary(r):[];if(sm.length)add([{v:'Resumen',s:5},{v:sm.map(([a,b])=>a+': '+b).join('   |   '),s:3}]);
+  add([]);
+  if(rowsL){add([{v:'#',s:2},...F.map(f=>({v:f.l,s:2}))]);r.units.forEach((u,i)=>add([{v:i+1,s:3},...F.map(f=>cellV(f,f.of?u[f.k]:u[f.k],r))]))}
+  else{add([{v:'Aspecto',s:2},...r.units.map((u,i)=>({v:def.ulabel(u,i),s:2}))]);
+    def.fields.forEach(f=>{if(f.g){add([{v:f.g,s:6}]);return}
+      if(f.t==='matrix'){GEL.forEach((g,j)=>{add([{v:g[0]==='Otro'?'Otro':g[0],s:5},...r.units.map(u=>{const x=(u.el||[])[j]||{};const rq=reqOf(j,r.h.tipo);const nm=g[0]==='Otro'&&x.n?x.n+': ':'';
+        const t=x.d||x.c||x.e?`${nm}Disp. ${x.d||'-'} · Req. ${rq==null?'-':rq===0?'N.A.':rq} · Insp. ${x.c||'-'} · ${x.e||'-'}`:'';const bad=BOP.includes(x.e)||(rq>0&&(x.d==='NO'||(x.c!==''&&x.c!=null&&+x.c<rq)));return{v:t,s:bad?4:3}})])});return}
+      add([{v:f.l,s:5},...r.units.map(u=>cellV(f,u[f.k],r))])})}
+  if(def.grid){const g=def.grid,rows=r.grid[g.k]||[];add([]);add([{v:g.l,s:6}]);add([...g.cols.map(c=>({v:c.l,s:2})),{v:'Factor',s:2},{v:'Total (min)',s:2}]);rows.forEach(x=>add([...g.cols.map(c=>cellV(c,x[c.k],r)),{v:0.7,s:3},{v:g.calc(x),s:3}]))}
+  add([]);(def.tail||[]).forEach(f=>add([{v:f.l,s:5},cellV(f,r.h[f.k],r)]));
+  add([{v:'Observaciones',s:5},{v:r.obs||'',s:3}]);M.push(`B${R.length}:${colL(W-1)}${R.length}`);
+  const fs=findings(def,r);if(fs.length){add([{v:'Hallazgos detectados',s:6}]);fs.forEach(f=>{add([{v:'•',s:3},{v:f.t,s:f.w?3:4}]);M.push(`B${R.length}:${colL(W-1)}${R.length}`)})}
+  add([]);add([{v:'¿Se requiere definir un plan de mejora?',s:5},{v:r.plan.req||'',s:3}]);
+  if(r.plan.req==='SI'&&r.plan.rows.length){add([{v:'PLAN DE MEJORA',s:6}]);add(['Situación evidenciada','Acción de mejora','Entregable','Responsable','Fecha de vencimiento'].map(v=>({v,s:2})));r.plan.rows.forEach(x=>add([x.sit,x.acc,x.ent,x.resp,fmt(x.fv)].map(v=>({v:v||'',s:3}))))}
+  add([]);add([{v:'Funcionario que realiza la inspección',s:5},{v:r.insp.nombre||'',s:3}]);add([{v:'Cargo',s:5},{v:r.insp.cargo||'',s:3}]);
+  add([{v:'Firma',s:5},{v:r.firma?'Firmado digitalmente en la app el '+new Date(r.updated).toLocaleString('es-CO'):'Sin firma',s:3}]);
+  add([{v:'Nota: una copia de este formato diligenciado debe estar en el lugar donde reposan los equipos.',s:0}]);
+  const widths=rowsL?[5,...F.map(f=>f.w||14)]:[44,...r.units.map(()=>24)];while(widths.length<W)widths.push(16);
+  return{R,M,widths}}
+function xlsxBlob(def,r){const{R,M,widths}=buildRows(def,r);
+  let sh='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0" zoomScale="90"/></sheetViews><cols>'+widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')+'</cols><sheetData>';
+  R.forEach((row,ri)=>{sh+=`<row r="${ri+1}">`;row.forEach((c,ci)=>{const o=c&&typeof c==='object'?c:{v:c??'',s:3};const ref=colL(ci)+(ri+1);
+    if(o.v===''||o.v==null)sh+=`<c r="${ref}" s="${o.s||0}"/>`;else if(typeof o.v==='number')sh+=`<c r="${ref}" s="${o.s||0}"><v>${o.v}</v></c>`;else sh+=`<c r="${ref}" s="${o.s||0}" t="inlineStr"><is><t xml:space="preserve">${xesc(o.v)}</t></is></c>`});sh+='</row>'});
+  sh+='</sheetData>'+(M.length?`<mergeCells count="${M.length}">${M.map(m=>`<mergeCell ref="${m}"/>`).join('')}</mergeCells>`:'')+'</worksheet>';
+  const st='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="5"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="13"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><u/><name val="Arial"/></font></fonts>'+
+   '<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF2F2F2"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFFFFF"/></patternFill></fill></fills>'+
+   '<borders count="2"><border/><border><left style="thin"><color rgb="FF999999"/></left><right style="thin"><color rgb="FF999999"/></right><top style="thin"><color rgb="FF999999"/></top><bottom style="thin"><color rgb="FF999999"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'+
+   '<cellXfs count="7"><xf xfId="0" borderId="0" fillId="0" fontId="0" numFmtId="0"/><xf xfId="0" borderId="0" fillId="0" numFmtId="0" fontId="1" applyFont="1"/><xf xfId="0" numFmtId="0" fontId="2" fillId="2" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="center" horizontal="center"/></xf><xf xfId="0" fillId="0" fontId="0" numFmtId="0" borderId="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf><xf xfId="0" numFmtId="0" fontId="4" fillId="4" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf><xf xfId="0" numFmtId="0" fontId="3" fillId="3" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf><xf xfId="0" borderId="0" numFmtId="0" fontId="3" fillId="3" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  const name=xesc((def.sheet||def.title.split('·')[0].trim()).slice(0,31));
+  return zip([{name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'},
+   {name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+   {name:'xl/workbook.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${name.replace(/[\\/?*[\]:]/g,'-')}" sheetId="1" r:id="rId1"/></sheets></workbook>`},
+   {name:'xl/_rels/workbook.xml.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'},
+   {name:'xl/styles.xml',data:st},{name:'xl/worksheets/sheet1.xml',data:sh}])}
+const fname=(def,r,ext)=>`Inspeccion_${def.title.replace('·','').trim()}_${(r.h.estacion||'').replace(/[^\wáéíóúñÁÉÍÓÚÑ-]+/g,'_')}_${r.h.fecha||''}.${ext}`.replace(/\s+/g,'_');
+function download(blob,name){if(EMBED){toast('En la vista previa no se permiten descargas. Instale la app para exportar.')}const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000)}
+function exportX(r){const def=MODS[r.mod];download(xlsxBlob(def,r),fname(def,r,'xlsx'))}
+async function shareX(r){const def=MODS[r.mod];const f=new File([xlsxBlob(def,r)],fname(def,r,'xlsx'),{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:def.full})}catch(x){}}else toast('Este dispositivo no permite compartir archivos')}
+function printRec(r){const def=MODS[r.mod];const{R,M}=buildRows(def,r);const W=Math.max(...R.map(x=>x.length));const mg={};M.forEach(m=>{const[a,b]=m.split(':');const ra=+a.replace(/\D/g,''),ca=a.replace(/\d/g,''),cb=b.replace(/\d/g,'');const ci=s=>[...s].reduce((n,c)=>n*26+c.charCodeAt(0)-64,0)-1;mg[ra+'-'+ci(ca)]=ci(cb)-ci(ca)+1});
+  let h='<table>';R.forEach((row,ri)=>{if(!row.length){h+='<tr><td class="s0" style="height:6px" colspan="'+W+'"></td></tr>';return}h+='<tr>';let skip=0;for(let ci=0;ci<row.length;ci++){if(skip){skip--;continue}const c=row[ci];const o=c&&typeof c==='object'?c:{v:c??'',s:3};const sp=mg[(ri+1)+'-'+ci];
+    const span=sp?sp:(ci===row.length-1&&row.length<W?W-ci:1);if(sp)skip=sp-1;h+=`<td class="s${o.s||0}" colspan="${span}">${esc(o.v)}</td>`}h+='</tr>'});h+='</table>';
+  if(r.firma&&r.firma.startsWith('data:image/'))h+=`<div class="pf"><img src="${r.firma}" alt="Firma"><div>${esc(r.insp.nombre||'')}<br>${esc(r.insp.cargo||'')}</div></div>`;
+  if(r.fotos.length)h+=`<h4>Registro fotográfico</h4><div class="ph">${r.fotos.filter(f=>f.startsWith('data:image/')).map(f=>`<img src="${f}" alt="">`).join('')}</div>`;
+  $('#print').innerHTML=h;if(EMBED){toast('En la vista previa no se permite imprimir. Instale la app para generar PDF.');return}setTimeout(()=>window.print(),80)}
+
+/* ================= NFPA ================= */
+function nfpaView(m){const keys=m?[m]:['extintores','scba','compresor','mangueras','gab_op','monitores','espuma'];
+  root.innerHTML=bar('Normativa NFPA aplicada','Referencia por tipo de inspección',m?'m-'+mh(m):'inicio')+`<main class="wrap pg nf">
+  <div class="card" style="background:#14294d;color:#fff;border:0"><div class="mhead"><span class="ic" style="background:rgba(255,255,255,.1)">${IC.nfpa}</span><div><b style="font-size:18px">Base normativa del programa de inspección</b><p style="margin:4px 0 0;opacity:.85" class="sm">Resumen orientativo. La frecuencia del programa (en amarillo) es la definida por la empresa y puede ser más exigente que la norma. Verifique siempre la edición adoptada por la autoridad competente.</p></div></div></div>
+  ${keys.map(k=>{const d=MODS[k],n=NFPA[k];return `<div class="card"><div class="mhead"><span class="ic">${IC[d.icon]}</span><div><b style="font-size:17px">${esc(k==='gab_op'?'Gabinetes contra incendio':d.title)}</b><div class="freq" style="margin-top:6px"><span class="badge y">Programa: ${d.freq}</span></div></div></div><h4>${esc(n.std)}</h4><ul>${n.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>${m?'':`<div class="btns" style="margin-top:10px"><button class="btn sm" data-go="m-${mh(k)}">Ir a la inspección</button></div>`}</div>`}).join('')}
+  </main>`}
+
+/* ================= Historial ================= */
+function histView(){root.innerHTML=bar('Historial','Todas las inspecciones del dispositivo')+`<main class="wrap pg"><div class="card"><div class="grid search"><label class="f"><span>Buscar (estación, TAG, serial, inspector)</span><input id="q" type="search" autocomplete="off"></label><label class="f"><span>Formato</span><select id="fm"><option value="">Todos</option>${Object.entries(MODS).map(([k,d])=>`<option value="${k}">${esc(d.title)}</option>`).join('')}</select></label></div><div class="list" id="hl"></div></div></main>`;
+  const draw=()=>{const q=$('#q').value.trim().toLowerCase(),fm=$('#fm').value;const l=[...S.recs.values()].filter(r=>MODS[r.mod]&&(!fm||r.mod===fm)&&(!q||JSON.stringify([r.h,r.insp.nombre,r.units.map(u=>[u.tag,u.serial,u.num,u.placa,u.ubic])]).toLowerCase().includes(q))).sort((a,b)=>(b.h.fecha||'').localeCompare(a.h.fecha||''));
+    $('#hl').innerHTML=l.length?l.map(recItem).join(''):'<p class="mut">No hay resultados.</p>'};$('#q').oninput=draw;$('#fm').onchange=draw;draw()}
+
+/* ================= Seguridad y respaldo ================= */
+function secView(){
+  root.innerHTML=bar('Seguridad y respaldo','Protección de la información')+`<main class="wrap pg">
+  <div class="card"><h3>${IC.sh.replace('<svg','<svg width="24" height="24" style="color:var(--ok)"')} Cómo se protege su información</h3><ul class="find">
+   <li>Todo se guarda <b>solo en este dispositivo</b>, cifrado con AES-256-GCM. La clave se deriva de su PIN con PBKDF2-SHA256 (600.000 iteraciones) y solo vive en memoria mientras la app está desbloqueada.</li>
+   <li>La app no tiene servidor, cuentas, analítica ni librerías externas. Su política de seguridad de contenido bloquea toda conexión de red (<code>connect-src 'none'</code>).</li>
+   <li>Bloqueo automático por inactividad y al salir de la app más de 3 minutos; retardo creciente tras 3 intentos fallidos.</li>
+   <li>Lo único que sale del dispositivo es lo que usted exporte (Excel, PDF o copia cifrada).</li></ul></div>
+  <div class="card"><h3>Ajustes</h3><div class="grid">
+   <label class="f"><span>Bloqueo automático por inactividad</span><select id="al">${[2,5,10,15].map(n=>`<option value="${n}" ${S.cfg.autolock==n?'selected':''}>${n} minutos</option>`).join('')}</select></label>
+   <label class="f"><span>Inspector por defecto</span><input id="in" value="${esc(S.cfg.insp.nombre||'')}" autocomplete="off"></label><label class="f"><span>Cargo por defecto</span><input id="ic" value="${esc(S.cfg.insp.cargo||'')}" autocomplete="off"></label></div>
+   <div class="btns" style="margin-top:12px"><button class="btn" id="cp">Cambiar PIN / clave</button><button class="btn" id="lk2">${IC.lock}Bloquear ahora</button></div></div>
+  <div class="card"><h3>Copia de seguridad cifrada</h3><p class="sm mut">Guarde una copia periódica (por ejemplo, en su PC o memoria de la empresa). El archivo queda cifrado con una clave de respaldo que usted define; sin ella no se puede abrir.</p>
+   <div class="btns"><button class="btn k" id="bk">Exportar copia cifrada</button><label class="btn">Restaurar copia<input type="file" id="rs" accept=".cibak,application/json" class="hide"></label></div></div>
+  <div class="card" id="inst"><h3>Instalación para uso sin señal</h3><ol class="find">
+   <li><b>Android (Chrome):</b> abra la dirección de la app una vez con internet → menú ⋮ → <b>Instalar aplicación</b> / Agregar a pantalla principal. Queda disponible sin señal.</li>
+   <li><b>iPhone / iPad (Safari):</b> abra la dirección → botón Compartir → <b>Agregar a pantalla de inicio</b>. Abra siempre desde ese ícono.</li>
+   <li><b>PC (Chrome o Edge):</b> ícono de instalar en la barra de direcciones, o abra el archivo <code>index.html</code> directamente.</li>
+   <li>Los datos quedan en el navegador/app de cada dispositivo: no se sincronizan entre equipos. Use la copia cifrada para trasladarlos.</li></ol></div>
+  <div class="card"><h3 style="color:var(--bad)">Zona de riesgo</h3><p class="sm mut">Elimina permanentemente todas las inspecciones, la firma guardada y el PIN de este dispositivo.</p><button class="btn d" id="wp">Borrar todos los datos</button></div>
+  <p class="sm mut" style="text-align:center">Inspección de equipos y elementos CI · v1.1 · ${S.recs.size} registros</p></main>`;
+  $('#al').onchange=e=>{S.cfg.autolock=+e.target.value;saveCfg();toast('Bloqueo automático: '+e.target.value+' min')};
+  $('#in').onchange=e=>{S.cfg.insp.nombre=e.target.value;saveCfg()};$('#ic').onchange=e=>{S.cfg.insp.cargo=e.target.value;saveCfg()};
+  $('#lk2').onclick=()=>lock();
+  $('#cp').onclick=async()=>{const r=await dialog(`<h3>Cambiar PIN / clave</h3><label class="f"><span>Actual</span><input name="a" type="password"></label><label class="f"><span>Nuevo (PIN 6+ dígitos o clave 8+ caracteres)</span><input name="b" type="password"></label><label class="f"><span>Confirmar nuevo</span><input name="c" type="password"></label>`,[{t:'Cancelar'},{t:'Cambiar',c:'p',v:1}]);
+    if(!r)return;const{a,b,c}=r.vals;if(b!==c)return toast('Los valores nuevos no coinciden');const kind=/^\d+$/.test(b)?'pin':'pass';if(kind==='pin'?b.length<6:b.length<8)return toast('PIN o clave demasiado corto');
+    const au=await DB.get('meta','auth');try{await unseal(await derive(a,ub64(au.salt),au.iter),au.check)}catch(x){return toast('El PIN actual no es correcto')}
+    toast('Re-cifrando…');const salt=crypto.getRandomValues(new Uint8Array(16)),k=await derive(b,salt,ITER);S.key=k;for(const rr of S.recs.values())await save(rr);await saveCfg();
+    await DB.put('meta','auth',{v:1,salt:b64(salt),iter:ITER,kind,check:await seal(k,{ok:'inspeccion-ci'})});S.kind=kind;toast('PIN actualizado')};
+  $('#bk').onclick=async()=>{const r=await dialog(`<h3>Clave de la copia</h3><p class="sm mut">Mínimo 8 caracteres. Anótela en un lugar seguro.</p><label class="f"><span>Clave</span><input name="a" type="password"></label><label class="f"><span>Confirmar</span><input name="b" type="password"></label>`,[{t:'Cancelar'},{t:'Exportar',c:'p',v:1}]);
+    if(!r)return;if(r.vals.a.length<8||r.vals.a!==r.vals.b)return toast('Clave inválida o no coincide');const salt=crypto.getRandomValues(new Uint8Array(16));const k=await derive(r.vals.a,salt,ITER);
+    const box=await seal(k,{recs:[...S.recs.values()],at:Date.now()});download(new Blob([JSON.stringify({app:'inspeccion-ci',v:1,salt:b64(salt),iter:ITER,...box})],{type:'application/json'}),`respaldo_inspeccion_CI_${todayISO()}.cibak`)};
+  $('#rs').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;let j;try{j=JSON.parse(await f.text());if(j.app!=='inspeccion-ci')throw 0}catch(x){return toast('Archivo no válido')}
+    const r=await dialog(`<h3>Restaurar copia</h3><label class="f"><span>Clave de la copia</span><input name="a" type="password"></label>`,[{t:'Cancelar'},{t:'Restaurar',c:'p',v:1}]);if(!r)return;
+    let d;try{d=await unseal(await derive(r.vals.a,ub64(j.salt),j.iter),j)}catch(x){return toast('Clave incorrecta')}
+    let n=0;for(const rr of d.recs||[]){if(!rr||!rr.id||!MODS[rr.mod])continue;const cur=S.recs.get(rr.id);if(!cur||cur.updated<rr.updated){const u=rr.updated;await save(rr);rr.updated=u;n++}}toast(n+' registro(s) restaurados')};
+  $('#wp').onclick=async()=>{const r=await dialog(`<h3>Borrar todos los datos</h3><p>Escriba <b>BORRAR</b> para confirmar.</p><input name="c" autocomplete="off">`,[{t:'Cancelar'},{t:'Borrar todo',c:'p',v:1}]);if(r&&r.vals.c==='BORRAR'){await DB.wipe();S.key=null;S.recs.clear();location.hash='';lockScreen('setup')}};
+}
+
+/* ================= Arranque ================= */
+(async()=>{await DB.init();const a=await DB.get('meta','auth');if(a)S.kind=a.kind||'pin';lockScreen(a?'unlock':'setup',DB.db?'':'Aviso: este navegador no permite almacenamiento persistente; los datos se perderán al cerrar.');
+  if('serviceWorker' in navigator&&location.protocol==='https:'&&!EMBED){try{navigator.serviceWorker.register('sw.js')}catch(x){}}})();
+}
+</script>
+</body>
+</html>
