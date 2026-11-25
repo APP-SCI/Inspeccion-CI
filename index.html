@@ -62,7 +62,7 @@ button{cursor:pointer}
 .tile.nfpa{background:linear-gradient(135deg,#1f3f73,#14294d);color:#fff;border:0}
 .tile.nfpa .ic{background:rgba(255,255,255,.12)}.tile.nfpa .due{color:#cfdcf2}
 .row3{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:28px}
-@media(min-width:760px){.row3{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:760px){.row3{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .mini{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;gap:12px;align-items:center;text-align:left;min-height:64px}
 .mini svg{width:30px;height:30px;flex:none}
 .mini small{display:block;color:var(--mut);font-size:13px}
@@ -167,6 +167,26 @@ details.u[open]>summary{border-bottom:1px solid var(--line)}
 .sumbox span{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px}
 .sumbox b{font-size:15px}
 .search{margin-bottom:12px}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:8px 0 16px}
+@media(min-width:760px){.kpis{grid-template-columns:2fr repeat(4,minmax(0,1fr))}}
+.kpi{background:var(--field);border:1px solid var(--line);border-radius:14px;padding:12px;position:relative;overflow:hidden}
+.kpi b{display:block;font-size:26px;line-height:1.1}.kpi span{font-size:13px;color:var(--mut)}
+.kpi.bad b{color:var(--bad)}.kpi.big{grid-column:1/-1}@media(min-width:760px){.kpi.big{grid-column:auto}}
+.kpi.big b{font-size:40px;color:var(--red)}.kpi i{position:absolute;left:0;bottom:0;height:5px;background:var(--ok)}
+.mx{overflow-x:auto;border:1px solid var(--line);border-radius:14px}
+.mx table{border-collapse:collapse;width:100%;font-size:13px}
+.mx th{font-size:11.5px;color:var(--mut);font-weight:700;padding:8px 6px;text-align:center;border-bottom:1px solid var(--line);min-width:86px;line-height:1.2}
+.mx th:first-child{text-align:left;min-width:120px;position:sticky;left:0;background:var(--card)}
+.mx td{padding:5px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}
+.mx td:first-child{text-align:left;position:sticky;left:0;background:var(--card);padding-left:10px}
+.mx td small{display:block;color:var(--mut);font-size:11.5px}
+.mi{display:block;margin:0 auto 4px;width:28px;height:28px}.mi svg{width:28px;height:28px}
+.cel{border:0;border-radius:10px;padding:6px 4px;width:100%;min-height:48px;font-size:12px;line-height:1.2}
+.cel b{display:block;font-size:12.5px}.cel small{color:inherit!important;opacity:.85}.cel[disabled]{cursor:default;opacity:.6}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:12.5px;color:var(--mut)}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:4px;border:1.5px solid;vertical-align:-2px;margin-right:5px}
+.chk{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 10px;margin-top:10px}
+.chk label{display:flex;gap:8px;align-items:center;min-height:40px;font-size:14px}.chk input{width:20px;min-height:20px}
 #print{display:none}
 @media(max-width:420px){.tile{min-height:176px;padding:14px}.tile .ic{width:62px;height:62px}.tile .ic svg{width:48px;height:48px}.el .ctl{grid-template-columns:minmax(0,1fr) 58px 66px;}.el .ctl select{grid-column:1/-1}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -218,14 +238,14 @@ async function seal(key,obj){const iv=crypto.getRandomValues(new Uint8Array(12))
 async function unseal(key,box){const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:ub64(box.iv)},key,ub64(box.ct));return JSON.parse(td.decode(pt))}
 
 /* ================= Almacenamiento local (IndexedDB) ================= */
-const DB={db:null,mem:{meta:new Map(),recs:new Map()},
-  async init(){try{this.db=await new Promise((res,rej)=>{const r=indexedDB.open('inspeccion-ci',1);r.onupgradeneeded=()=>{r.result.createObjectStore('meta');r.result.createObjectStore('recs')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}catch(e){this.db=null}},
+const DB={db:null,mem:{meta:new Map(),recs:new Map(),cons:new Map()},
+  async init(){try{this.db=await new Promise((res,rej)=>{const r=indexedDB.open('inspeccion-ci',2);r.onupgradeneeded=()=>{const d=r.result;for(const n of ['meta','recs','cons'])if(!d.objectStoreNames.contains(n))d.createObjectStore(n)};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}catch(e){this.db=null}},
   tx(st,mode,fn){return new Promise((res,rej)=>{const t=this.db.transaction(st,mode),r=fn(t.objectStore(st));t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})},
   get(st,k){return this.db?this.tx(st,'readonly',s=>s.get(k)):Promise.resolve(this.mem[st].get(k))},
   put(st,k,v){return this.db?this.tx(st,'readwrite',s=>s.put(v,k)):Promise.resolve(this.mem[st].set(k,v))},
   del(st,k){return this.db?this.tx(st,'readwrite',s=>s.delete(k)):Promise.resolve(this.mem[st].delete(k))},
   all(st){return this.db?this.tx(st,'readonly',s=>s.getAll()):Promise.resolve([...this.mem[st].values()])},
-  async wipe(){if(this.db){await this.tx('recs','readwrite',s=>s.clear());await this.tx('meta','readwrite',s=>s.clear())}else{this.mem.meta.clear();this.mem.recs.clear()}}
+  async wipe(){if(this.db){await this.tx('recs','readwrite',s=>s.clear());await this.tx('meta','readwrite',s=>s.clear());await this.tx('cons','readwrite',s=>s.clear())}else{this.mem.meta.clear();this.mem.recs.clear();this.mem.cons.clear()}}
 };
 
 /* ================= Íconos ================= */
@@ -238,6 +258,7 @@ gab:`<svg viewBox="0 0 64 64"><rect x="9" y="6" width="46" height="52" rx="5" fi
 mon:`<svg viewBox="0 0 64 64"><path d="M30 38L11 58M30 38l19 20M30 38v20" stroke="#2b2f36" stroke-width="4.5" stroke-linecap="round"/><path d="M30 36L48 15" stroke="#c8102e" stroke-width="9" stroke-linecap="round"/><path d="M48 15l5-6" stroke="#c9a227" stroke-width="10" stroke-linecap="round"/><circle cx="30" cy="37" r="8" fill="#c8102e"/><circle cx="30" cy="37" r="3" fill="#fff"/><path d="M56 3c4 2 6 6 5 11M60 1c3 3 4 7 3 11" stroke="#4fb3ff" stroke-width="2.5" fill="none" stroke-linecap="round"/><rect x="6" y="56" width="10" height="4" rx="2" fill="#2b2f36"/><rect x="44" y="56" width="10" height="4" rx="2" fill="#2b2f36"/></svg>`,
 esp:`<svg viewBox="0 0 64 64"><rect x="10" y="22" width="32" height="36" rx="5" fill="#ffc20e"/><path d="M10 32h32M10 48h32" stroke="#b8860b" stroke-width="2.5"/><rect x="13" y="25" width="4" height="30" rx="2" fill="#fff" opacity=".45"/><rect x="18" y="16" width="9" height="7" rx="1.5" fill="#2b2f36"/><rect x="17" y="36" width="18" height="8" rx="1.5" fill="#fff"/><path d="M20 40h12" stroke="#c8102e" stroke-width="2"/><circle cx="46" cy="16" r="8" fill="#fff" stroke="#7cc4ff" stroke-width="2.5"/><circle cx="56" cy="27" r="5.5" fill="#fff" stroke="#7cc4ff" stroke-width="2.5"/><circle cx="38" cy="7" r="4.5" fill="#fff" stroke="#7cc4ff" stroke-width="2.5"/><circle cx="57" cy="10" r="3" fill="#fff" stroke="#7cc4ff" stroke-width="2"/></svg>`,
 nfpa:`<svg viewBox="0 0 64 64"><path d="M6 14c9-4 18-4 26 2 8-6 17-6 26-2v38c-9-4-18-4-26 2-8-6-17-6-26-2z" fill="#fff"/><path d="M32 16v38" stroke="#14294d" stroke-width="2.5"/><path d="M11 22c6-2 11-2 16 1M11 30c6-2 11-2 16 1M11 38c6-2 11-2 16 1" stroke="#9fb4d6" stroke-width="2.2" fill="none"/><path d="M37 33l5 5 10-11" stroke="#ffc20e" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+tab:`<svg viewBox="0 0 32 32"><rect x="4" y="18" width="6" height="10" rx="1.5" fill="#c8102e"/><rect x="13" y="11" width="6" height="17" rx="1.5" fill="#17191d"/><rect x="22" y="5" width="6" height="23" rx="1.5" fill="#ffc20e"/></svg>`,
 inv:`<svg viewBox="0 0 32 32"><rect x="6" y="5" width="20" height="24" rx="3" fill="none" stroke="#c8102e" stroke-width="3"/><rect x="11" y="2.5" width="10" height="5" rx="1.5" fill="#17191d"/><path d="M11 14h10M11 19h10M11 24h6" stroke="#17191d" stroke-width="2.5" stroke-linecap="round"/></svg>`,
 hist:`<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="none" stroke="#c8102e" stroke-width="3"/><path d="M16 9v8l5 3" stroke="#17191d" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`,
 seg:`<svg viewBox="0 0 32 32"><path d="M16 3l11 4v8c0 7-5 12-11 14C10 27 5 22 5 15V7z" fill="#c8102e"/><rect x="11" y="14" width="10" height="8" rx="1.5" fill="#fff"/><path d="M13 14v-2a3 3 0 016 0v2" stroke="#fff" stroke-width="2" fill="none"/></svg>`,
@@ -373,7 +394,7 @@ espuma:{std:'NFPA 11 — Espumas de baja, media y alta expansión · NFPA 25 (si
 NFPA.gab_no=NFPA.gab_op;
 
 /* ================= Estado ================= */
-const S={key:null,recs:new Map(),inv:{},cfg:{id:'cfg',mod:'cfg',insp:{},autolock:5,sig:''},kind:'pin',last:Date.now(),hiddenAt:0};
+const S={key:null,recs:new Map(),inv:{},prog:{stations:[]},cons:new Map(),cfg:{id:'cfg',mod:'cfg',insp:{},autolock:5,sig:''},kind:'pin',last:Date.now(),hiddenAt:0};
 const recsOf=m=>[...S.recs.values()].filter(r=>r.mod===m).sort((a,b)=>(b.h.fecha||'').localeCompare(a.h.fecha||'')||b.updated-a.updated);
 async function save(r){r.updated=Date.now();S.recs.set(r.id,r);const box=await seal(S.key,r);await DB.put('recs',r.id,{id:r.id,...box})}
 async function saveCfg(){const box=await seal(S.key,S.cfg);await DB.put('meta','cfg',box)}
@@ -428,13 +449,15 @@ function lockScreen(mode,msg=''){
       for(const b of await DB.all('recs')){try{const r=await unseal(k,b);S.recs.set(r.id,r)}catch(x){}}
       const c=await DB.get('meta','cfg');if(c){try{Object.assign(S.cfg,await unseal(k,c))}catch(x){}}
       const iv=await DB.get('meta','inv');if(iv){try{S.inv=await unseal(k,iv)||{}}catch(x){}}
+      const pv=await DB.get('meta','prog');if(pv){try{S.prog=await unseal(k,pv)||{stations:[]}}catch(x){}}
+      for(const b of await DB.all('cons')){try{const r=await unseal(k,b);S.cons.set(r.id,r)}catch(x){}}
       start();
      }
     }catch(x){er.textContent=x.message;$('#go').disabled=false;$('#go').textContent=setup?'Crear y entrar':'Desbloquear'}
   };
   setTimeout(()=>{const i=$('#p1');i&&i.focus()},60);
 }
-async function lock(msg){clearTimeout(saveT);if(CUR&&S.key){try{await save(CUR)}catch(x){}}CUR=null;S.key=null;S.recs.clear();S.inv={};S.cfg={id:'cfg',mod:'cfg',insp:{},autolock:5,sig:''};$('#print').innerHTML='';$$('.dlg').forEach(d=>d.remove());lockScreen('unlock',msg||'')}
+async function lock(msg){clearTimeout(saveT);if(CUR&&S.key){try{await save(CUR)}catch(x){}}CUR=null;S.key=null;S.recs.clear();S.inv={};S.prog={stations:[]};S.cons=new Map();S.cfg={id:'cfg',mod:'cfg',insp:{},autolock:5,sig:''};$('#print').innerHTML='';$$('.dlg').forEach(d=>d.remove());lockScreen('unlock',msg||'')}
 ['pointerdown','keydown','input'].forEach(ev=>addEventListener(ev,()=>S.last=Date.now(),{passive:true}));
 setInterval(()=>{if(S.key&&Date.now()-S.last>(S.cfg.autolock||5)*60000)lock('Sesión bloqueada por inactividad.')},15000);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)S.hiddenAt=Date.now();else if(S.key&&S.hiddenAt&&Date.now()-S.hiddenAt>180000)lock('Sesión bloqueada al salir de la app.')});
@@ -448,7 +471,7 @@ function route(){
   if(h.startsWith('m-')&&MODS[h.slice(2).replace(/-/g,'_')])return modView(h.slice(2).replace(/-/g,'_'));
   if(h.startsWith('e-')&&S.recs.get(h.slice(2)))return editor(S.recs.get(h.slice(2)));
   if(h.startsWith('n-')&&MODS[h.slice(2).replace(/-/g,'_')])return nfpaView(h.slice(2).replace(/-/g,'_'));
-  if(h==='nfpa')return nfpaView();if(h==='inventario')return invView();if(h==='historial')return histView();if(h==='seguridad')return secView();
+  if(h==='nfpa')return nfpaView();if(h==='inventario')return invView();if(h==='tablero')return tabView();if(h==='historial')return histView();if(h==='seguridad')return secView();
   home();
 }
 const mh=m=>m.replace(/_/g,'-');
@@ -478,7 +501,7 @@ function home(){
     return `<button class="tile" data-tile="${t.id}"><span class="ic">${IC[t.ic]}</span><b>${esc(t.n)}</b><span class="freq">${(t.b||t.m.map(m=>[MODS[m].freq,MODS[m].months>1])).map(([x,y])=>`<span class="badge ${y?'y':''}">${esc(x)}</span>`).join('')}</span><span class="due ${di.c}">${esc(di.t)}</span></button>`}).join('')}
    <button class="tile nfpa" data-go="nfpa"><span class="ic">${IC.nfpa}</span><b>Normativa NFPA aplicada</b><span class="freq"><span class="badge y">Referencia</span></span><span class="due">Requisitos y frecuencias por equipo</span></button>
   </div>
-  <div class="row3"><button class="mini" data-go="historial">${IC.hist}<span><b>Historial</b><small>Buscar y exportar</small></span></button><button class="mini" data-go="inventario">${IC.inv}<span><b>Inventario</b><small>${Object.keys(S.inv).length?Object.keys(S.inv).length+' cargados':'Precargar equipos'}</small></span></button><button class="mini" data-go="seguridad">${IC.seg}<span><b>Seguridad y respaldo</b><small>PIN, copia cifrada, instalación</small></span></button></div></main>`;
+  <div class="row3"><button class="mini" data-go="historial">${IC.hist}<span><b>Historial</b><small>Buscar y exportar</small></span></button><button class="mini" data-go="inventario">${IC.inv}<span><b>Inventario</b><small>${Object.keys(S.inv).length?Object.keys(S.inv).length+' cargados':'Precargar equipos'}</small></span></button><button class="mini" data-go="tablero">${IC.tab}<span><b>Tablero y reportes</b><small>Consolidado por estación</small></span></button><button class="mini" data-go="seguridad">${IC.seg}<span><b>Seguridad y respaldo</b><small>PIN, copia cifrada, instalación</small></span></button></div></main>`;
   $('#lk').onclick=()=>lock();
   $$('[data-tile]').forEach(b=>b.onclick=async()=>{const t=TILES.find(x=>x.id===b.dataset.tile);if(t.m.length===1)return go('m-'+mh(t.m[0]));
     const r=await dialog(`<h3>${esc(t.n)}</h3><p class="mut">Seleccione el formato a diligenciar.</p><div class="list">${t.m.map(m=>`<button class="it" data-pick="${m}"><span class="ic" style="width:48px;height:48px">${IC[MODS[m].icon].replace('<svg','<svg width="44" height="44"')}</span><span class="t"><b>${esc(MODS[m].title)}</b><small>Frecuencia ${MODS[m].freq.toLowerCase()} · ${esc(dueInfo(m).t)}</small></span></button>`).join('')}</div>`,[{t:'Cerrar'}]);
@@ -709,15 +732,16 @@ function buildRows(def,r){
   add([{v:'Nota: una copia de este formato diligenciado debe estar en el lugar donde reposan los equipos.',s:0}]);
   const widths=rowsL?[5,...F.map(f=>f.w||14)]:[44,...r.units.map(()=>24)];while(widths.length<W)widths.push(16);
   return{R,M,widths}}
+const XST='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="5"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="13"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><u/><name val="Arial"/></font></fonts>'+
+   '<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF2F2F2"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFFFFF"/></patternFill></fill></fills>'+
+   '<borders count="2"><border/><border><left style="thin"><color rgb="FF999999"/></left><right style="thin"><color rgb="FF999999"/></right><top style="thin"><color rgb="FF999999"/></top><bottom style="thin"><color rgb="FF999999"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'+
+   '<cellXfs count="7"><xf xfId="0" borderId="0" fillId="0" fontId="0" numFmtId="0"/><xf xfId="0" borderId="0" fillId="0" numFmtId="0" fontId="1" applyFont="1"/><xf xfId="0" numFmtId="0" fontId="2" fillId="2" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="center" horizontal="center"/></xf><xf xfId="0" fillId="0" fontId="0" numFmtId="0" borderId="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf><xf xfId="0" numFmtId="0" fontId="4" fillId="4" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf><xf xfId="0" numFmtId="0" fontId="3" fillId="3" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf><xf xfId="0" borderId="0" numFmtId="0" fontId="3" fillId="3" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
 function xlsxBlob(def,r){const{R,M,widths}=buildRows(def,r);
   let sh='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0" zoomScale="90"/></sheetViews><cols>'+widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')+'</cols><sheetData>';
   R.forEach((row,ri)=>{sh+=`<row r="${ri+1}">`;row.forEach((c,ci)=>{const o=c&&typeof c==='object'?c:{v:c??'',s:3};const ref=colL(ci)+(ri+1);
     if(o.v===''||o.v==null)sh+=`<c r="${ref}" s="${o.s||0}"/>`;else if(typeof o.v==='number')sh+=`<c r="${ref}" s="${o.s||0}"><v>${o.v}</v></c>`;else sh+=`<c r="${ref}" s="${o.s||0}" t="inlineStr"><is><t xml:space="preserve">${xesc(o.v)}</t></is></c>`});sh+='</row>'});
   sh+='</sheetData>'+(M.length?`<mergeCells count="${M.length}">${M.map(m=>`<mergeCell ref="${m}"/>`).join('')}</mergeCells>`:'')+'</worksheet>';
-  const st='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="5"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="13"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><u/><name val="Arial"/></font></fonts>'+
-   '<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF2F2F2"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFFFFF"/></patternFill></fill></fills>'+
-   '<borders count="2"><border/><border><left style="thin"><color rgb="FF999999"/></left><right style="thin"><color rgb="FF999999"/></right><top style="thin"><color rgb="FF999999"/></top><bottom style="thin"><color rgb="FF999999"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'+
-   '<cellXfs count="7"><xf xfId="0" borderId="0" fillId="0" fontId="0" numFmtId="0"/><xf xfId="0" borderId="0" fillId="0" numFmtId="0" fontId="1" applyFont="1"/><xf xfId="0" numFmtId="0" fontId="2" fillId="2" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="center" horizontal="center"/></xf><xf xfId="0" fillId="0" fontId="0" numFmtId="0" borderId="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf><xf xfId="0" numFmtId="0" fontId="4" fillId="4" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf><xf xfId="0" numFmtId="0" fontId="3" fillId="3" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf><xf xfId="0" borderId="0" numFmtId="0" fontId="3" fillId="3" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  const st=XST;
   const name=xesc((def.sheet||def.title.split('·')[0].trim()).slice(0,31));
   return zip([{name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'},
    {name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
@@ -986,6 +1010,136 @@ async function exportInv(){const r=await dialog(`<h3>Exportar inventario</h3><p 
   if(!r)return;if(r.vals.a.length<8||r.vals.a!==r.vals.b)return toast('Clave inválida o no coincide');const salt=crypto.getRandomValues(new Uint8Array(16));const k=await derive(r.vals.a,salt,ITER);
   const box=await seal(k,{app:'inspeccion-ci-inv',v:1,inv:Object.values(S.inv)});download(new Blob([JSON.stringify({app:'inspeccion-ci-inv',v:1,enc:true,salt:b64(salt),iter:ITER,...box})],{type:'application/json'}),`inventario_CI_${todayISO()}.ciinv`)}
 
+/* ================= Reportes y tablero nacional ================= */
+const TMODS=['extintores','scba','compresor','gab_op','gab_no','mangueras','monitores','espuma'];
+const TSHORT={extintores:'Extintores',scba:'SCBA',compresor:'Compresor',gab_op:'Gab. operativas',gab_no:'Gab. no operativas',mangueras:'Mangueras',monitores:'Monitores',espuma:'Espuma'};
+async function saveProg(){await DB.put('meta','prog',await seal(S.key,S.prog))}
+async function saveCons(r){S.cons.set(r.id,r);await DB.put('cons',r.id,{id:r.id,...await seal(S.key,r)})}
+const allRecs=()=>{const m=new Map(S.cons);for(const r of S.recs.values())if(MODS[r.mod])m.set(r.id,r);return[...m.values()]};
+function xlsxMulti(sheets){const files=[];let wbs='',rels='',ct='';
+  sheets.forEach((S_,i)=>{let sh='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"'+(i===0?' tabSelected="1"':'')+'><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>'+S_.widths.map((w,j)=>`<col min="${j+1}" max="${j+1}" width="${w}" customWidth="1"/>`).join('')+'</cols><sheetData>';
+    S_.rows.forEach((row,ri)=>{sh+=`<row r="${ri+1}">`;row.forEach((c,ci)=>{const o=c&&typeof c==='object'?c:{v:c??'',s:ri===0?2:3};const ref=colL(ci)+(ri+1);if(o.v===''||o.v==null)sh+=`<c r="${ref}" s="${o.s}"/>`;else if(typeof o.v==='number')sh+=`<c r="${ref}" s="${o.s}"><v>${o.v}</v></c>`;else sh+=`<c r="${ref}" s="${o.s}" t="inlineStr"><is><t xml:space="preserve">${xesc(o.v)}</t></is></c>`});sh+='</row>'});
+    sh+='</sheetData>'+(S_.rows.length>1?`<autoFilter ref="A1:${colL(S_.widths.length-1)}${S_.rows.length}"/>`:'')+'</worksheet>';
+    files.push({name:`xl/worksheets/sheet${i+1}.xml`,data:sh});wbs+=`<sheet name="${xesc(S_.name.slice(0,31))}" sheetId="${i+1}" r:id="rId${i+1}"/>`;rels+=`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`;
+    ct+=`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`});
+  return zip([{name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+ct+'<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'},
+    {name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+    {name:'xl/workbook.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${wbs}</sheets></workbook>`},
+    {name:'xl/_rels/workbook.xml.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${rels}<Relationship Id="rIdS" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+    {name:'xl/styles.xml',data:XST},...files])}
+
+/* --- operador: enviar reporte --- */
+async function repKeyAsk(title,txt){const r=await dialog(`<h3>${esc(title)}</h3><p class="sm mut">${esc(txt)}</p><label class="f"><span>Clave de reportes</span><input name="a" type="password" value="${esc(S.cfg.repKey||'')}"></label><label style="display:flex;gap:10px;align-items:center;min-height:44px"><input type="checkbox" name="g" ${S.cfg.repKey?'checked':''} style="width:22px;min-height:22px"> Recordar la clave en este dispositivo (cifrada)</label>`,[{t:'Cancelar'},{t:'Continuar',c:'p',v:1}]);
+  if(!r)return null;const k=r.vals.a;if(k.length<8){toast('La clave debe tener 8 caracteres o más');return null}if(r.vals.g){S.cfg.repKey=k}else delete S.cfg.repKey;await saveCfg();return k}
+async function sendReport(){
+  const mine=[...S.recs.values()].filter(r=>MODS[r.mod]&&r.status==='final');
+  if(!mine.length){toast('No hay inspecciones finalizadas para reportar');return}
+  const ests=[...new Set(mine.map(r=>cl(r.h.estacion).toUpperCase()))];
+  const k=await repKeyAsk('Enviar reporte',`Se incluirán ${mine.length} inspecciones finalizadas de: ${ests.join(', ')}. Sin fotos, para que el archivo sea liviano. Use la clave de reportes que le dio el coordinador.`);if(!k)return;
+  const salt=crypto.getRandomValues(new Uint8Array(16)),key=await derive(k,salt,ITER);
+  const payload={app:'inspeccion-ci-rep',v:1,at:Date.now(),emisor:{nombre:S.cfg.insp.nombre||'',cargo:S.cfg.insp.cargo||''},recs:mine.map(r=>({...r,fotos:[]}))};
+  const box=await seal(key,payload);const blob=new Blob([JSON.stringify({app:'inspeccion-ci-rep',v:1,enc:true,salt:b64(salt),iter:ITER,...box})],{type:'application/json'});
+  const nm=`reporte_CI_${ests.length===1?ests[0].replace(/[^\wÁÉÍÓÚÑ]+/g,'_'):'varias'}_${todayISO()}.cirep`;
+  if(navigator.canShare){const f=new File([blob],nm,{type:'application/json'});if(navigator.canShare({files:[f]})){const q=await dialog(`<h3>Reporte listo</h3><p>${mine.length} inspecciones · ${esc(ests.join(', '))}</p>`,[{t:'Descargar',v:'d'},{t:'Compartir…',c:'p',v:'s'}]);if(q&&q.v==='s'){try{await navigator.share({files:[f],title:'Reporte de inspecciones CI'})}catch(x){}return}if(!q)return}}
+  download(blob,nm);toast('Reporte generado: envíelo al coordinador')}
+
+/* --- coordinador: importar reportes --- */
+async function importReports(files){let ok=0,n=0,errs=[];let key=null;
+  for(const f of files){try{const j=JSON.parse(await f.text());if(j.app!=='inspeccion-ci-rep')throw new Error('no es un reporte de inspecciones');
+      let d=null;const tries=[S.cfg.repKey,key].filter(Boolean);for(const t of tries){try{d=await unseal(await derive(t,ub64(j.salt),j.iter),j);key=t;break}catch(x){}}
+      if(!d){const k=await repKeyAsk('Clave de reportes','Ingrese la clave con la que los operadores cifran sus reportes.');if(!k)return;try{d=await unseal(await derive(k,ub64(j.salt),j.iter),j);key=k}catch(x){throw new Error('clave incorrecta')}}
+      for(const r of d.recs||[]){if(!r||!r.id||!MODS[r.mod]||r.status!=='final')continue;const cur=S.cons.get(r.id);if(cur&&cur.updated>=r.updated)continue;await saveCons({...r,_src:{emisor:d.emisor||{},at:d.at,archivo:f.name}});n++}ok++}
+    catch(x){errs.push(f.name+': '+(x.message||'no se pudo leer'))}}
+  if(errs.length)await dialog(`<h3>Algunos archivos no se cargaron</h3><ul class="find">${errs.map(e=>`<li>${esc(e)}</li>`).join('')}</ul>`,[{t:'Cerrar',c:'p'}]);
+  toast(`${ok} reporte(s) cargados · ${n} inspecciones nuevas o actualizadas`);tabView()}
+
+/* --- cálculo del tablero --- */
+function tabData(zone){
+  const today=todayISO(),soon=iso(new Date(Date.now()+15*864e5));const recs=allRecs().filter(r=>r.status==='final');
+  const st=(S.prog.stations||[]).filter(s=>!zone||s.z===zone).sort((a,b)=>a.n.localeCompare(b.n));const cells=[];const att=[];const finds=[];const plans=[];
+  const rep={};for(const r of S.cons.values()){const k=nk(r.h.estacion);if(!rep[k]||rep[k]<r._src.at)rep[k]=r._src.at}
+  for(const r of S.recs.values()){if(MODS[r.mod]&&r.status==='final'){const k=nk(r.h.estacion);if(!rep[k]||rep[k]<r.updated)rep[k]=r.updated}}
+  for(const s of st){for(const m of TMODS){if(!s.m.includes(m)){cells.push({s,m,c:'na'});continue}
+      const last=recs.filter(r=>r.mod===m&&nk(r.h.estacion)===nk(s.n)).sort((a,b)=>(b.h.fecha||'').localeCompare(a.h.fecha||'')||b.updated-a.updated)[0];
+      if(!last){cells.push({s,m,c:'sin'});att.push({s,m,t:'Sin registro',o:0});continue}
+      const next=addM(last.h.fecha,MODS[m].months);const c=next<today?'venc':next<=soon?'prox':'ok';cells.push({s,m,c,r:last,next});
+      if(c==='venc')att.push({s,m,t:'Vencida desde '+fmt(next),o:1});else if(c==='prox')att.push({s,m,t:'Vence el '+fmt(next),o:2});
+      findings(MODS[m],last).forEach(f=>finds.push({s,m,r:last,t:f.t,w:f.w}));
+      if(last.plan.req==='SI')last.plan.rows.forEach(p=>plans.push({s,m,r:last,p,v:p.fv&&p.fv<today}))}}
+  const req=cells.filter(c=>c.c!=='na'),okc=req.filter(c=>c.c==='ok'||c.c==='prox').length;
+  const sinRep=st.filter(s=>!rep[nk(s.n)]);
+  return{st,cells,att:att.sort((a,b)=>a.o-b.o),finds,plans,req:req.length,okc,pct:req.length?Math.round(okc/req.length*100):0,rep,sinRep}}
+const CEL={ok:['Al día','var(--ok)','var(--okb)'],prox:['Próxima','light-dark(#7a5a00,#ffd766)','var(--warnb)'],venc:['Vencida','var(--bad)','var(--badb)'],sin:['Sin registro','var(--bad)','var(--badb)'],na:['No aplica','var(--mut)','transparent']};
+function tabView(){
+  const zones=[...new Set((S.prog.stations||[]).map(s=>s.z).filter(Boolean))];const zone=S.cfg.tabZone&&zones.includes(S.cfg.tabZone)?S.cfg.tabZone:'';
+  const D=tabData(zone);const cols=TMODS.filter(m=>D.st.some(s=>s.m.includes(m)));
+  root.innerHTML=bar('Tablero y reportes','Consolidado de inspecciones por estación')+`<main class="wrap pg">
+   <div class="card"><h3>Enviar mi reporte</h3><p class="sm mut">Para operadores: genera un archivo cifrado con sus inspecciones finalizadas para enviarlo al coordinador por correo o carpeta compartida.</p><div class="btns"><button class="btn k" id="rsend">Enviar reporte</button></div></div>
+   <div class="card"><h3>Tablero nacional</h3>
+    <div class="btns" style="margin-bottom:12px"><label class="btn p">${IC.plus}Cargar reportes<input type="file" id="rimp" accept=".cirep,application/json" multiple class="hide"></label><button class="btn" id="rprog">Estaciones y programa</button>${D.st.length?`<button class="btn" id="rxls">Excel consolidado</button>`:''}</div>
+    ${zones.length>1?`<label class="f" style="max-width:260px;margin-bottom:12px"><span>Zona</span><select id="rzone"><option value="">Todas</option>${zones.map(z=>`<option ${z===zone?'selected':''}>${esc(z)}</option>`).join('')}</select></label>`:''}
+    ${!D.st.length?`<p class="mut">Configure primero las estaciones y las inspecciones que aplican en cada una (botón <b>Estaciones y programa</b>). Puede crearlas a partir del inventario cargado.</p>`:`
+    <p class="sm mut" style="margin-top:0">Estado a ${fmt(todayISO())}${zone?' · Zona '+esc(zone):''} · ${D.st.length} estaciones · incluye reportes recibidos y las inspecciones de este dispositivo.</p>
+    <div class="kpis">
+     <div class="kpi big"><b>${D.pct}%</b><span>Cumplimiento del programa</span><i style="width:${D.pct}%"></i></div>
+     <div class="kpi"><b>${D.okc}/${D.req}</b><span>Inspecciones al día</span></div>
+     <div class="kpi ${D.sinRep.length?'bad':''}"><b>${D.sinRep.length}</b><span>Estaciones sin reporte</span></div>
+     <div class="kpi ${D.finds.length?'bad':''}"><b>${D.finds.length}</b><span>Hallazgos en últimas inspecciones</span></div>
+     <div class="kpi ${D.plans.filter(p=>p.v).length?'bad':''}"><b>${D.plans.filter(p=>p.v).length}</b><span>Acciones de mejora vencidas</span></div>
+    </div>
+    <div class="mx scroll"><table><thead><tr><th>Estación</th>${cols.map(m=>`<th title="${esc(MODS[m].title)}"><span class="mi">${IC[MODS[m].icon]}</span>${esc(TSHORT[m])}</th>`).join('')}<th>Último reporte</th></tr></thead><tbody>
+     ${D.st.map(s=>`<tr><td><b>${esc(s.n)}</b><small>${esc(s.z||'')}</small></td>${cols.map(m=>{const c=D.cells.find(x=>x.s===s&&x.m===m);const[t,fg,bg]=CEL[c.c];return `<td><button class="cel" data-cel="${esc(s.n)}|${m}" style="color:${fg};background:${bg}" ${c.c==='na'?'disabled':''}><b>${t}</b>${c.r?`<small>${fmt(c.r.h.fecha)}</small>`:''}</button></td>`}).join('')}
+      <td>${D.rep[nk(s.n)]?`<small>${fmt(iso(new Date(D.rep[nk(s.n)])))}</small>`:`<span class="pill bad">Sin reporte</span>`}</td></tr>`).join('')}</tbody></table></div>
+    <div class="legend">${['ok','prox','venc','sin'].map(k=>`<span><i style="background:${CEL[k][2]};border-color:${CEL[k][1]}"></i>${CEL[k][0]}</span>`).join('')}</div>`}
+   </div>
+   ${D.st.length?`
+   <div class="card"><h3>Requiere atención <span class="pill ${D.att.length?'bad':'ok'}">${D.att.length}</span></h3>${D.att.length?`<div class="list">${D.att.map(a=>`<button class="it" data-cel="${esc(a.s.n)}|${a.m}"><span class="ic" style="width:40px;height:40px;border-radius:10px;background:var(--tint);display:grid;place-items:center;flex:none">${IC[MODS[a.m].icon].replace('<svg','<svg width="30" height="30"')}</span><span class="t"><b>${esc(a.s.n)} · ${esc(MODS[a.m].title)}</b><small>${esc(a.t)}${D.rep[nk(a.s.n)]?'':' · la estación no ha enviado reporte'}</small></span></button>`).join('')}</div>`:'<p class="mut">Todo el programa está al día.</p>'}</div>
+   <div class="card"><h3>Hallazgos y planes de mejora</h3>${D.st.map(s=>{const f=D.finds.filter(x=>x.s===s),p=D.plans.filter(x=>x.s===s);if(!f.length&&!p.length)return'';return `<details class="u"><summary><span class="t">${esc(s.n)}<small>${f.length} hallazgo${f.length===1?'':'s'} · ${p.length} acci${p.length===1?'ón':'ones'} de mejora${p.filter(x=>x.v).length?' · '+p.filter(x=>x.v).length+' vencida(s)':''}</small></span></summary><div class="ub">
+     ${f.length?`<ul class="find">${f.slice(0,60).map(x=>`<li>${esc(TSHORT[x.m])}: ${esc(x.t)}</li>`).join('')}${f.length>60?`<li>y ${f.length-60} más (ver Excel consolidado)</li>`:''}</ul>`:''}
+     ${p.length?`<div style="overflow-x:auto;margin-top:8px"><table class="lg"><thead><tr><th>Acción</th><th>Responsable</th><th>Fecha</th></tr></thead><tbody>${p.map(x=>`<tr><td>${esc(x.p.acc||x.p.sit||'')}</td><td>${esc(x.p.resp||'')}</td><td><span class="pill ${x.v?'bad':'ok'}">${fmt(x.p.fv)||'—'}</span></td></tr>`).join('')}</tbody></table></div>`:''}</div></details>`}).join('')||'<p class="mut">Sin hallazgos ni planes de mejora en las últimas inspecciones.</p>'}</div>
+   <div class="card"><h3>Reportes recibidos</h3>${S.cons.size?`<div class="list">${Object.values([...S.cons.values()].reduce((a,r)=>{const k=r._src.archivo+'|'+r._src.at;(a[k]=a[k]||{f:r._src,n:0,e:new Set()}).n++;a[k].e.add(r.h.estacion);return a},{})).sort((a,b)=>b.f.at-a.f.at).map(x=>`<div class="it"><span class="t"><b>${esc([...x.e].join(', '))}</b><small>${x.n} inspecciones · ${esc(x.f.emisor.nombre||'sin nombre')} · generado ${fmt(iso(new Date(x.f.at)))}</small></span></div>`).join('')}</div><div class="btns" style="margin-top:10px"><button class="btn sm d" id="rclr">Borrar reportes cargados</button></div>`:'<p class="mut">Aún no se han cargado reportes.</p>'}</div>`:''}
+  </main>`;
+  $('#rsend').onclick=sendReport;$('#rimp').onchange=e=>{const f=[...e.target.files];e.target.value='';if(f.length)importReports(f)};$('#rprog').onclick=progEdit;
+  const z=$('#rzone');if(z)z.onchange=e=>{S.cfg.tabZone=e.target.value;saveCfg();tabView()};
+  const x=$('#rxls');if(x)x.onclick=()=>exportCons(D,cols,zone);
+  const c=$('#rclr');if(c)c.onclick=async()=>{if(await confirmD('Borrar reportes','Se quitarán del tablero todas las inspecciones recibidas de otros dispositivos. Las inspecciones propias no cambian.','Borrar')){for(const id of S.cons.keys())await DB.del('cons',id);S.cons.clear();tabView()}};
+  $$('[data-cel]').forEach(b=>b.onclick=()=>{const[n,m]=b.dataset.cel.split('|');cellDetail(n,m)});
+}
+async function cellDetail(n,m){const def=MODS[m];const recs=allRecs().filter(r=>r.status==='final'&&r.mod===m&&nk(r.h.estacion)===nk(n)).sort((a,b)=>(b.h.fecha||'').localeCompare(a.h.fecha||''));
+  const last=recs[0];const fs=last?findings(def,last):[];
+  const r=await dialog(`<h3>${esc(n)} · ${esc(def.title)}</h3>${last?`<p>Última inspección: <b>${fmt(last.h.fecha)}</b> · próxima: <b>${fmt(addM(last.h.fecha,def.months))}</b><br><span class="sm mut">${esc(last.insp.nombre||'')} ${last.insp.cargo?'· '+esc(last.insp.cargo):''} · ${last.units.length} ${esc((def.plural||def.unit+'s').toLowerCase())}${last._src?' · reporte del '+fmt(iso(new Date(last._src.at))):' · este dispositivo'}</span></p>
+    ${fs.length?`<div class="warn" style="background:var(--badb)"><b>${fs.length} hallazgo${fs.length>1?'s':''}</b><ul class="find">${fs.slice(0,25).map(f=>`<li>${esc(f.t)}</li>`).join('')}${fs.length>25?`<li>y ${fs.length-25} más</li>`:''}</ul></div>`:'<p class="mut">Sin hallazgos.</p>'}
+    ${recs.length>1?`<p class="sm mut">Historial: ${recs.slice(0,8).map(x=>fmt(x.h.fecha)).join(' · ')}</p>`:''}`:`<p>No hay inspecciones registradas de esta estación para este formato. ${S.cons.size?'Puede que la estación no haya enviado su reporte.':''}</p>`}`,last?[{t:'Cerrar'},{t:'Descargar formato Excel',c:'p',v:1}]:[{t:'Cerrar',c:'p'}]);
+  if(r&&r.v&&last)exportX(last)}
+async function progEdit(){
+  const st=(S.prog.stations||[]).map(s=>({...s,m:[...s.m]}));
+  const fromInv=()=>{const o={};Object.values(S.inv).forEach(e=>{const k=nk(e.estacion);(o[k]=o[k]||{n:e.estacion,z:e.zona,m:[]}).m.push(e.mod)});
+    allRecs().forEach(r=>{const k=nk(r.h.estacion);(o[k]=o[k]||{n:cl(r.h.estacion).toUpperCase(),z:cl(r.h.zona).toUpperCase(),m:[]});if(!o[k].m.includes(r.mod))o[k].m.push(r.mod)});
+    return Object.values(o).map(s=>({...s,m:TMODS.filter(m=>s.m.includes(m))}))};
+  const draw=()=>`<h3>Estaciones y programa</h3><p class="sm mut">Marque las inspecciones que aplican en cada estación. El tablero mide el cumplimiento solo de lo marcado.</p>
+   <div class="btns" style="margin:8px 0 12px"><button type="button" class="btn sm" data-pa="inv">Crear desde inventario y registros</button><button type="button" class="btn sm" data-pa="add">${IC.plus}Agregar estación</button></div>
+   ${st.map((s,i)=>`<div class="card" style="background:var(--field);padding:12px;margin-bottom:10px"><div class="grid"><label class="f"><span>Estación</span><input data-ps="${i}.n" value="${esc(s.n)}"></label><label class="f"><span>Zona</span><input data-ps="${i}.z" value="${esc(s.z||'')}"></label></div>
+    <div class="chk">${TMODS.map(m=>`<label><input type="checkbox" data-pm="${i}.${m}" ${s.m.includes(m)?'checked':''}> ${esc(TSHORT[m])}</label>`).join('')}</div><button type="button" class="btn sm d" data-pa="del" data-pi="${i}" style="margin-top:8px">Quitar estación</button></div>`).join('')||'<p class="mut">No hay estaciones.</p>'}`;
+  const d=document.createElement('div');d.className='dlg';d.innerHTML=`<div role="dialog" aria-modal="true"><div id="pgc">${draw()}</div><div class="btns"><button class="btn" data-pa="x">Cancelar</button><button class="btn p" data-pa="ok">Guardar</button></div></div>`;document.body.append(d);
+  const sync=()=>{$$('[data-ps]',d).forEach(x=>{const[i,k]=x.dataset.ps.split('.');st[+i][k]=x.value.trim().toUpperCase()});$$('[data-pm]',d).forEach(x=>{const[i,m]=x.dataset.pm.split('.');const a=st[+i].m;if(x.checked&&!a.includes(m))a.push(m);if(!x.checked&&a.includes(m))a.splice(a.indexOf(m),1)})};
+  d.addEventListener('click',async e=>{const b=e.target.closest('[data-pa]');if(!b){if(e.target===d)d.remove();return}const a=b.dataset.pa;sync();
+    if(a==='x'){d.remove();return}
+    if(a==='add'){st.push({n:'',z:st.at(-1)?.z||'',m:['extintores','scba']})}
+    if(a==='inv'){for(const s of fromInv()){const e2=st.find(x=>nk(x.n)===nk(s.n));if(e2){s.m.forEach(m=>{if(!e2.m.includes(m))e2.m.push(m)})}else st.push(s)}}
+    if(a==='del'){st.splice(+b.dataset.pi,1)}
+    if(a==='ok'){S.prog={stations:st.filter(s=>s.n).map(s=>({n:s.n,z:s.z,m:TMODS.filter(m=>s.m.includes(m))}))};await saveProg();d.remove();tabView();return}
+    $('#pgc',d).innerHTML=draw()})}
+function exportCons(D,cols,zone){
+  const head=s=>({v:s,s:2}),b=v=>({v:v??'',s:3}),bad=v=>({v,s:4});
+  const R1=[['Estación','Zona',...cols.map(m=>MODS[m].title),'Último reporte'].map(head)];
+  D.st.forEach(s=>R1.push([b(s.n),b(s.z),...cols.map(m=>{const c=D.cells.find(x=>x.s===s&&x.m===m);const t=CEL[c.c][0]+(c.r?' · '+fmt(c.r.h.fecha):'');return c.c==='venc'||c.c==='sin'?bad(t):b(t)}),D.rep[nk(s.n)]?b(fmt(iso(new Date(D.rep[nk(s.n)])))):bad('Sin reporte')]));
+  R1.push([]);R1.push([{v:'Cumplimiento del programa',s:5},{v:D.pct+'% ('+D.okc+' de '+D.req+' inspecciones al día)',s:3}]);R1.push([{v:'Fecha de corte',s:5},{v:fmt(todayISO()),s:3}]);
+  const R2=[['Estación','Inspección','Fecha inspección','Hallazgo','Tipo'].map(head),...D.finds.map(f=>[b(f.s.n),b(MODS[f.m].title),b(fmt(f.r.h.fecha)),f.w?b(f.t):bad(f.t),b(f.w?'Verificar':'No conformidad')])];
+  const R3=[['Estación','Inspección','Situación evidenciada','Acción de mejora','Entregable','Responsable','Fecha de vencimiento','Estado'].map(head),...D.plans.map(p=>[b(p.s.n),b(MODS[p.m].title),b(p.p.sit),b(p.p.acc),b(p.p.ent),b(p.p.resp),b(fmt(p.p.fv)),p.v?bad('Vencida'):b('En plazo')])];
+  const R4=[['Estación','Inspección','Fecha','Inspector','Equipos','Hallazgos','Origen'].map(head)];
+  D.cells.filter(c=>c.r).forEach(c=>R4.push([b(c.s.n),b(MODS[c.m].title),b(fmt(c.r.h.fecha)),b(c.r.insp.nombre),{v:c.r.units.length,s:3},{v:findings(MODS[c.m],c.r).length,s:3},b(c.r._src?'Reporte '+fmt(iso(new Date(c.r._src.at))):'Este dispositivo')]));
+  download(xlsxMulti([{name:'Cumplimiento',rows:R1,widths:[22,12,...cols.map(()=>20),16]},{name:'Hallazgos',rows:R2,widths:[20,22,14,70,16]},{name:'Planes de mejora',rows:R3,widths:[20,22,40,40,20,20,16,12]},{name:'Inspecciones',rows:R4,widths:[20,22,14,26,10,10,20]}]),`Consolidado_inspecciones_CI${zone?'_'+zone:''}_${todayISO()}.xlsx`)}
+
 /* ================= NFPA ================= */
 function nfpaView(m){const keys=m?[m]:['extintores','scba','compresor','mangueras','gab_op','monitores','espuma'];
   root.innerHTML=bar('Normativa NFPA aplicada','Referencia por tipo de inspección',m?'m-'+mh(m):'inicio')+`<main class="wrap pg nf">
@@ -1018,22 +1172,22 @@ function secView(){
    <li><b>PC (Chrome o Edge):</b> ícono de instalar en la barra de direcciones, o abra el archivo <code>index.html</code> directamente.</li>
    <li>Los datos quedan en el navegador/app de cada dispositivo: no se sincronizan entre equipos. Use la copia cifrada para trasladarlos.</li></ol></div>
   <div class="card"><h3 style="color:var(--bad)">Zona de riesgo</h3><p class="sm mut">Elimina permanentemente todas las inspecciones, la firma guardada y el PIN de este dispositivo.</p><button class="btn d" id="wp">Borrar todos los datos</button></div>
-  <p class="sm mut" style="text-align:center">Inspección de equipos y elementos CI · v1.5 · ${S.recs.size} registros</p></main>`;
+  <p class="sm mut" style="text-align:center">Inspección de equipos y elementos CI · v1.6 · ${S.recs.size} registros</p></main>`;
   $('#al').onchange=e=>{S.cfg.autolock=+e.target.value;saveCfg();toast('Bloqueo automático: '+e.target.value+' min')};
   $('#in').onchange=e=>{S.cfg.insp.nombre=e.target.value;saveCfg()};$('#ic').onchange=e=>{S.cfg.insp.cargo=e.target.value;saveCfg()};
   $('#lk2').onclick=()=>lock();
   $('#cp').onclick=async()=>{const r=await dialog(`<h3>Cambiar PIN / clave</h3><label class="f"><span>Actual</span><input name="a" type="password"></label><label class="f"><span>Nuevo (PIN 6+ dígitos o clave 8+ caracteres)</span><input name="b" type="password"></label><label class="f"><span>Confirmar nuevo</span><input name="c" type="password"></label>`,[{t:'Cancelar'},{t:'Cambiar',c:'p',v:1}]);
     if(!r)return;const{a,b,c}=r.vals;if(b!==c)return toast('Los valores nuevos no coinciden');const kind=/^\d+$/.test(b)?'pin':'pass';if(kind==='pin'?b.length<6:b.length<8)return toast('PIN o clave demasiado corto');
     const au=await DB.get('meta','auth');try{await unseal(await derive(a,ub64(au.salt),au.iter),au.check)}catch(x){return toast('El PIN actual no es correcto')}
-    toast('Re-cifrando…');const salt=crypto.getRandomValues(new Uint8Array(16)),k=await derive(b,salt,ITER);S.key=k;for(const rr of S.recs.values())await save(rr);await saveCfg();await saveInv();
+    toast('Re-cifrando…');const salt=crypto.getRandomValues(new Uint8Array(16)),k=await derive(b,salt,ITER);S.key=k;for(const rr of S.recs.values())await save(rr);for(const rr of S.cons.values())await saveCons(rr);await saveCfg();await saveInv();await saveProg();
     await DB.put('meta','auth',{v:1,salt:b64(salt),iter:ITER,kind,check:await seal(k,{ok:'inspeccion-ci'})});S.kind=kind;toast('PIN actualizado')};
   $('#bk').onclick=async()=>{const r=await dialog(`<h3>Clave de la copia</h3><p class="sm mut">Mínimo 8 caracteres. Anótela en un lugar seguro.</p><label class="f"><span>Clave</span><input name="a" type="password"></label><label class="f"><span>Confirmar</span><input name="b" type="password"></label>`,[{t:'Cancelar'},{t:'Exportar',c:'p',v:1}]);
     if(!r)return;if(r.vals.a.length<8||r.vals.a!==r.vals.b)return toast('Clave inválida o no coincide');const salt=crypto.getRandomValues(new Uint8Array(16));const k=await derive(r.vals.a,salt,ITER);
-    const box=await seal(k,{recs:[...S.recs.values()],inv:S.inv,at:Date.now()});download(new Blob([JSON.stringify({app:'inspeccion-ci',v:1,salt:b64(salt),iter:ITER,...box})],{type:'application/json'}),`respaldo_inspeccion_CI_${todayISO()}.cibak`)};
+    const box=await seal(k,{recs:[...S.recs.values()],inv:S.inv,prog:S.prog,at:Date.now()});download(new Blob([JSON.stringify({app:'inspeccion-ci',v:1,salt:b64(salt),iter:ITER,...box})],{type:'application/json'}),`respaldo_inspeccion_CI_${todayISO()}.cibak`)};
   $('#rs').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;let j;try{j=JSON.parse(await f.text());if(j.app!=='inspeccion-ci')throw 0}catch(x){return toast('Archivo no válido')}
     const r=await dialog(`<h3>Restaurar copia</h3><label class="f"><span>Clave de la copia</span><input name="a" type="password"></label>`,[{t:'Cancelar'},{t:'Restaurar',c:'p',v:1}]);if(!r)return;
     let d;try{d=await unseal(await derive(r.vals.a,ub64(j.salt),j.iter),j)}catch(x){return toast('Clave incorrecta')}
-    let n=0;let ni=0;for(const[k2,e2]of Object.entries(d.inv||{})){if(e2&&MODS[e2.mod]&&(!S.inv[k2]||S.inv[k2].fecha<e2.fecha)){S.inv[k2]=e2;ni++}}if(ni)await saveInv();for(const rr of d.recs||[]){if(!rr||!rr.id||!MODS[rr.mod])continue;const cur=S.recs.get(rr.id);if(!cur||cur.updated<rr.updated){const u=rr.updated;await save(rr);rr.updated=u;n++}}toast(n+' registro(s) restaurados')};
+    let n=0;let ni=0;for(const[k2,e2]of Object.entries(d.inv||{})){if(e2&&MODS[e2.mod]&&(!S.inv[k2]||S.inv[k2].fecha<e2.fecha)){S.inv[k2]=e2;ni++}}if(ni)await saveInv();if(d.prog&&d.prog.stations&&d.prog.stations.length&&!(S.prog.stations||[]).length){S.prog=d.prog;await saveProg()}for(const rr of d.recs||[]){if(!rr||!rr.id||!MODS[rr.mod])continue;const cur=S.recs.get(rr.id);if(!cur||cur.updated<rr.updated){const u=rr.updated;await save(rr);rr.updated=u;n++}}toast(n+' registro(s) restaurados')};
   $('#wp').onclick=async()=>{const r=await dialog(`<h3>Borrar todos los datos</h3><p>Escriba <b>BORRAR</b> para confirmar.</p><input name="c" autocomplete="off">`,[{t:'Cancelar'},{t:'Borrar todo',c:'p',v:1}]);if(r&&r.vals.c==='BORRAR'){await DB.wipe();S.key=null;S.recs.clear();location.hash='';lockScreen('setup')}};
 }
 
