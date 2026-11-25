@@ -1,4 +1,4 @@
-INSPECCIÓN DE EQUIPOS Y ELEMENTOS CI · v1.3
+INSPECCIÓN DE EQUIPOS Y ELEMENTOS CI · v1.5
 Formatos incluidos:
   - Formato de inspección de extintores
   - Formato de inspección de equipos de respiración autónoma y compresores de aire
@@ -28,6 +28,12 @@ SI SE REQUIERE APK (Android) O APP DE TIENDA (iOS)
   La misma carpeta se puede empaquetar sin cambios con PWABuilder (pwabuilder.com) o con
   Capacitor (npx cap init / add android / add ios). Para iOS se requiere Mac con Xcode y cuenta
   de desarrollador Apple.
+
+INVENTARIO (PRECARGA DE EQUIPOS)
+  Inicio → Inventario → Importar archivos: acepta los formatos Excel ya diligenciados o un archivo .ciinv.
+  Los archivos se leen en el dispositivo y no se suben a internet. La primera inspección de cada
+  estación trae los equipos precargados. "Exportar inventario" genera un .ciinv cifrado con clave
+  para cargarlo en otros celulares.
 
 SEGURIDAD
   - Datos cifrados AES-256-GCM; clave derivada del PIN con PBKDF2-SHA256, 600.000 iteraciones.
